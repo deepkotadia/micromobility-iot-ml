@@ -136,3 +136,6 @@ dmypy.json
 
 # PyCharm files
 .idea/
+
+# Data files
+sidewalk_street_classification/IMU_Streams
