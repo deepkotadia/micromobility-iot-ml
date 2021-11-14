@@ -137,6 +137,7 @@ dmypy.json
 # PyCharm files
 .idea/
 
-#folders
+# folders
 plots/
 IMU_Streams/
+sidewalk-vs-street/IMU_Streams
