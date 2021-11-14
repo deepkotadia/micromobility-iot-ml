@@ -2,6 +2,7 @@ from os import listdir
 from os.path import isfile, join
 import numpy as np
 import pandas as pd
+from sklearn.model_selection import train_test_split
 
 
 COL_NAMES =['time',
@@ -71,5 +72,12 @@ def read_all_stream_files_in_dir(dir_path):
     return full_quantized_df
 
 
+def shuffle_and_split(df, test_size=0.2):
+    train, test = train_test_split(df, test_size=test_size, shuffle=True)
+    return train, test
+
+
 if __name__ == '__main__':
     full_quantized_df = read_all_stream_files_in_dir('IMU_Streams')
+    train_df, test_df = shuffle_and_split(full_quantized_df, test_size=0.2)
+    print('Done!')
