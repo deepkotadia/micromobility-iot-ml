@@ -20,7 +20,7 @@ def read_imu_stream_file(filepath):
 
 
 def quantize_and_clean(sensor_reading_triplets, num_triplets_per_window, col_labels, feature_label):
-    filtered_triplets = sensor_reading_triplets[250:-250]  # discard first and last 5s of data (sampling rate is 50Hz)
+    filtered_triplets = sensor_reading_triplets[150:-150]  # discard first and last 3s of data (sampling rate is 50Hz)
 
     # Quantize by window size
     flattened_triplets = filtered_triplets.flatten()
@@ -34,13 +34,12 @@ def quantize_and_clean(sensor_reading_triplets, num_triplets_per_window, col_lab
     return quantized_df
 
 
-def read_all_stream_files_in_dir(dir_path):
+def read_all_stream_files_in_dir(dir_path, window_size=150):
     stats = dict()
     stats['total_rows_all_stream_files'] = 0
     filenames = [f for f in listdir(dir_path) if isfile(join(dir_path, f))]  # get all stream filenames
     stats['total_stream_files'] = len(filenames)
     stats['sidewalk_files'], stats['street_files'] = 0, 0
-    window_size = 250
 
     full_quantized_df = pd.DataFrame()  # dataframe with quantized data from all IMU streams
     col_names = list()
