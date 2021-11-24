@@ -4,7 +4,7 @@ clear; clc;
 close all;
 
 %% Target files
-infolderName = ['../OriginalData/' 'awr2243'];
+infolderName = ['../OriginalData/'];
 outfolderName = ['../PostProcessData/'];
 heatmapsDir = [outfolderName '/' 'heatmaps'];
 
