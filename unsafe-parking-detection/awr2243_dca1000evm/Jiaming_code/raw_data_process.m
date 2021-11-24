@@ -152,7 +152,6 @@ if 1
     ylim([0 dShow]);
     caxis([min(vMxvdb, [], 'all'), max(vMxvdb, [], 'all')]);
     t1 = title('');
-    %axis off
     
     % static objects
     h2_hax = subplot(2,2,2);
@@ -163,7 +162,6 @@ if 1
     ylim([0 dShow]);
     caxis([min(vZMxvdb, [], 'all'), max(vZMxvdb, [], 'all')]);
     title('Static objects');
-    %axis off
 
     % dynamic objects
     h3_hax = subplot(2,2,3); 
@@ -175,7 +173,6 @@ if 1
     ylim([0 dShow]);
     caxis([min(vNzMxvdb, [], 'all'), max(vNzMxvdb, [], 'all')]);
     title('Dynamic objects');
-    %axis off
 
     if exist('detections', 'var')
         h3d = scatter(detections{1}(1,:), detections{1}(2,:), 'wx', ...
@@ -208,7 +205,6 @@ if 1
         axis off
         title '' Visible off
         exportgraphics(h1_fig, [heatmapsOutDir '/' 'h1_' num2str(iFrame) '.png'])
-        %print(gcf, '-djpeg', [outfolderName '/' 'h1_' num2str(iFrame)])
 
         h2_fig = figure('Visible','off');
         h2_hax_new = copyobj(h2_hax, h2_fig);
@@ -216,7 +212,6 @@ if 1
         axis off
         title '' Visible off
         exportgraphics(h2_fig, [heatmapsOutDir '/' 'h2_' num2str(iFrame) '.png'])
-        %print(gcf, '-djpeg', [outfolderName '/' 'h2_' num2str(iFrame)])
 
         h3_fig = figure('Visible','off');
         h3_hax_new = copyobj(h3_hax, h3_fig);
@@ -224,7 +219,6 @@ if 1
         axis off
         title '' Visible off
         exportgraphics(h3_fig, [heatmapsOutDir '/' 'h3_' num2str(iFrame) '.png'])
-        %print(gcf, '-djpeg', [outfolderName '/' 'h3_' num2str(iFrame)])
     end
 
 %             writerObj = VideoWriter([outfolderName '/' targetName '.mp4'], 'MPEG-4');

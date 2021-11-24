@@ -1,0 +1,39 @@
+Id,bin_Filename,log_Filename,Reference Image,Scenario,Notes
+adc_data_rack_sixth,adc_data_rack_sixth.bin,adc_data_LogFile_rack_sixth.txt,rack_sixth.HEIC,bicyclerack,
+adc_data_rack_hub,adc_data_rack_hub.bin,adc_data_LogFile_rack_hub.txt,rack_hub.HEIC,bicyclerack,
+,,,,,
+adc_data_bush1,adc_data_bush1.bin,adc_data_LogFile_bush1.txt,bush1.HEIC,bush,
+adc_data_bush2,adc_data_bush2.bin,adc_data_LogFile_bush2.txt,bush2.HEIC,bush,
+,,,,,
+adc_data_hydrant1,adc_data_hydrant1.bin,adc_data_LogFile_hydrant1.txt,hydrant1.HEIC,firehydrant,
+adc_data_hydrant1_low,adc_data_hydrant1_low.bin,adc_data_LogFile_hydrant1_low.txt,hydrant1.HEIC,firehydrant,
+adc_data_hydrant2,adc_data_hydrant2.bin,adc_data_LogFile_hydrant2.txt,hydrant1.HEIC,firehydrant,
+adc_data_hydrant2_low,adc_data_hydrant2_low.bin,adc_data_LogFile_hydrant2_low.txt,hydrant1.HEIC,firehydrant,
+,,,,,
+adc_data_human1,adc_data_human1.bin,adc_data_LogFile_human1.txt,human1.HEIC,human,
+adc_data_human2,adc_data_human2.bin,adc_data_LogFile_human2.txt,human2.HEIC,human,
+,,,,,
+adc_data_lp1_angle1,adc_data_lp1_angle1.bin,adc_data_LogFile_lp1_angle1.txt,lp1.HEIC,lamppost,50ms periodicity
+adc_data_lp1_angle2,adc_data_lp1_angle2.bin,adc_data_LogFile_lp1_angle2.txt,lp1.HEIC,lamppost,50ms periodicity
+adc_data_lp1_angle3,adc_data_lp1_angle3.bin,adc_data_LogFile_lp1_angle3.txt,lp1.HEIC,lamppost,50ms periodicity
+adc_data_lp1_angle4,adc_data_lp1_angle4.bin,adc_data_LogFile_lp1_angle4.txt,lp1.HEIC,lamppost,50ms periodicity
+adc_data_lp2_360,adc_data_lp2_360.bin,adc_data_LogFile_lp2_360.txt,lp2.HEIC,lamppost,
+,,,,,
+adc_data_middle_of_sidewalk_hub,adc_data_middle_of_sidewalk_hub.bin,adc_data_LogFile_middle_of_sidewalk_hub.txt,,middle_of_sidewalk,
+adc_data_middle_of_sidewalk_outside_jj_green,adc_data_middle_of_sidewalk_outside_jj_green.bin,adc_data_LogFile_middle_of_sidewalk_outside_jj_green.txt,middle_of_sidewalk_outside_jj_green.HEIC,middle_of_sidewalk,
+adc_data_middle_of_sidewalk_outside_jj_sixth,adc_data_middle_of_sidewalk_outside_jj_sixth.bin,adc_data_LogFile_middle_of_sidewalk_outside_jj_sixth.txt,middle_of_sidewalk_outside_jj_sixth.HEIC,middle_of_sidewalk,
+adc_data_middle_of_sidewalk_outside_lando,adc_data_middle_of_sidewalk_outside_lando.bin,adc_data_LogFile_middle_of_sidewalk_outside_lando.txt,middle_of_sidewalk_outside_lando.HEIC,middle_of_sidewalk,
+adc_data_middle_of_sidewalk_sixth_and_daniel,adc_data_middle_of_sidewalk_sixth_and_daniel.bin,adc_data_LogFile_middle_of_sidewalk_sixth_and_daniel.txt,,middle_of_sidewalk,
+adc_data_middle_of_sidewalk_sixth_and_john,adc_data_middle_of_sidewalk_sixth_and_john.bin,adc_data_LogFile_middle_of_sidewalk_sixth_and_john.txt,,middle_of_sidewalk,
+,,,,,
+adc_data_tree1_backforth,adc_data_tree1_backforth.bin,adc_data_LogFile_tree1_backforth.txt,tree1.HEIC,tree,50ms periodicity
+adc_data_tree1_360,adc_data_tree1_360.bin,adc_data_LogFile_tree1_360.txt,tree1.HEIC,tree,
+adc_data_tree2_360,adc_data_tree2_360.bin,adc_data_LogFile_tree2_360.txt,tree2.HEIC,tree,
+,,,,,
+adc_data_brick_wall_1,adc_data_brick_wall_1.bin,adc_data_LogFile_brick_wall_1.txt,brick_wall_1.HEIC,wall,"Narrow alleyway, so likely has multipath"
+adc_data_brick_wall_2,adc_data_brick_wall_2.bin,adc_data_LogFile_brick_wall_2.txt,brick_wall_1.HEIC,wall,On green st
+adc_data_glass_wall_1,adc_data_glass_wall_1.bin,adc_data_LogFile_glass_wall_1.txt,glass_wall_1.HEIC,wall,
+adc_data_glass_wall_2,adc_data_glass_wall_2.bin,adc_data_LogFile_glass_wall_2.txt,glass_wall_2.HEIC,wall,
+adc_data_glass_wall_3,adc_data_glass_wall_3.bin,adc_data_LogFile_glass_wall_3.txt,glass_wall_3.HEIC,wall,
+adc_data_stone_wall_1,adc_data_stone_wall_1.bin,adc_data_LogFile_stone_wall_1.txt,stone_wall_1.HEIC,wall,"Narrow alleyway, so likely has multipath"
+adc_data_stone_wall_2,adc_data_stone_wall_2.bin,adc_data_LogFile_stone_wall_2.txt,stone_wall_1.HEIC,wall,

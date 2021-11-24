@@ -128,9 +128,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# CSV files
-*.csv
-
 # Apple files
 .DS_Store
 
@@ -142,3 +139,12 @@ plots/
 IMU_Streams/
 sidewalk-vs-street/IMU_Streams
 unsafe-parking-detection/awr2243_dca1000evm/PostProcessData
+unsafe-parking-detection/awr2243_dca1000evm/OriginalData/bicyclerack
+unsafe-parking-detection/awr2243_dca1000evm/OriginalData/bush
+unsafe-parking-detection/awr2243_dca1000evm/OriginalData/firehydrant
+unsafe-parking-detection/awr2243_dca1000evm/OriginalData/human
+unsafe-parking-detection/awr2243_dca1000evm/OriginalData/lamppost
+unsafe-parking-detection/awr2243_dca1000evm/OriginalData/middle_of_sidewalk
+unsafe-parking-detection/awr2243_dca1000evm/OriginalData/tree
+unsafe-parking-detection/awr2243_dca1000evm/OriginalData/wall
+unsafe-parking-detection/awr2243_dca1000evm/OriginalData/Radar_Data_Photos
