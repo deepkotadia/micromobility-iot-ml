@@ -28,7 +28,7 @@ for row = 1:rows
     heatmaps_out_dir = [heatmaps_scenario_out_dir '/' id];
     mkdir(heatmaps_out_dir)
 
-    % Create heatmaps
+    % Create heatmaps and save to dir
     raw_data_process(bin_input_path, log_input_path, params_filename, heatmaps_out_dir)
 
 end
