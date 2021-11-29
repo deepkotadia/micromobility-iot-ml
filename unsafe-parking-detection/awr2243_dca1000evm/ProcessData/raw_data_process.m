@@ -233,7 +233,8 @@ if 1
 %             end
 %             close(writerObj);
 
-    % Cleanup
-    delete(postFile);
-    delete(sizeFile);
 end
+
+% Cleanup
+delete(postFile);
+delete(sizeFile);
