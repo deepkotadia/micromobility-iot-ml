@@ -232,4 +232,8 @@ if 1
 %                 writeVideo(writerObj, getframe(gcf));
 %             end
 %             close(writerObj);
+
+    % Cleanup
+    delete(postFile);
+    delete(sizeFile);
 end
