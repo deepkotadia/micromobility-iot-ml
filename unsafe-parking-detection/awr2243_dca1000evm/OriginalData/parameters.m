@@ -7,9 +7,9 @@ nADCBits = 16;
 c = 3e8;
 Fc = 77e9;
 slope = 60.012e12;
-idleTime = 50e-6;
+idleTime = 100e-6;
 adcStartTime = 6e-6;
-rampEndTime = 50e-6;
+rampEndTime = 60e-6;
 Fs = 10000e3;
 nSamples = 256;
 % Frame property
