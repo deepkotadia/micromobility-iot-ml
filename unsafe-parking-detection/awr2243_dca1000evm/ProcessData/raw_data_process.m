@@ -136,11 +136,12 @@ if 1
     %% pcolor heatmap
     % scale to range of interest
     dShow = 30;
+    % dShow = 3;
     % pol2cart
     angleDataX = dRange.' * cos(thetaRange2);
     angleDataY = dRange.' * sin(thetaRange2);
 
-    figure('Position', [100 100 2000 1000]);
+    figure('Position', [100 100 2000 1000], 'Visible', 'off');
     % all velocity
     h1_hax = subplot(2,2,1);
     h1 = pcolor(angleDataX, angleDataY, vMxvdb(:,:,1));
@@ -178,12 +179,15 @@ if 1
         h3d = scatter(detections{1}(1,:), detections{1}(2,:), 'wx', ...
             'LineWidth', 2);
     end
-%     if exist('positions', 'var')
-%         h3p = scatter(positions{1}(1,:), positions{1}(2,:), 'w+', ...
-%             'LineWidth', 2);
-%     end
+    if exist('positions', 'var')
+        h3p = scatter(positions{1}(1,:), positions{1}(2,:), 'w+', ...
+            'LineWidth', 2);
+    end
 
-    for iFrame = 0:nFrames-1
+    %for iFrame = 0:nFrames-1
+    frames = {0, 49, 98};
+    for k = 1:length(frames)
+        iFrame = frames{k};
         t1.String = [num2str(iFrame) ' frame, ' num2str(Tp*iFrame) ' sec'];
         h1.CData = vMxvdb(:,:,iFrame+1);
         h2.CData = vZMxvdb(:,:,iFrame+1);
@@ -196,29 +200,30 @@ if 1
             h3p.XData = positions{iFrame+1}(1,:);
             h3p.YData = positions{iFrame+1}(2,:);
         end
+
         pause(Tp);
         
         % Save plots as PNG
         h1_fig = figure('Visible','off');
         h1_hax_new = copyobj(h1_hax, h1_fig);
         set(h1_hax_new, 'Position', get(0, 'DefaultAxesPosition'));
-        axis off
+        %axis off
         title '' Visible off
-        exportgraphics(h1_fig, [heatmapsOutDir '/' 'h1_' num2str(iFrame) '.png'])
+        exportgraphics(h1_fig, [heatmapsOutDir '/' 'h1_' num2str(dShow) '_' num2str(iFrame) '.png'])
 
         h2_fig = figure('Visible','off');
         h2_hax_new = copyobj(h2_hax, h2_fig);
         set(h2_hax_new, 'Position', get(0, 'DefaultAxesPosition'));
-        axis off
+        %axis off
         title '' Visible off
-        exportgraphics(h2_fig, [heatmapsOutDir '/' 'h2_' num2str(iFrame) '.png'])
+        exportgraphics(h2_fig, [heatmapsOutDir '/' 'h2_' num2str(dShow) '_' num2str(iFrame) '.png'])
 
         h3_fig = figure('Visible','off');
         h3_hax_new = copyobj(h3_hax, h3_fig);
         set(h3_hax_new, 'Position', get(0, 'DefaultAxesPosition'));
-        axis off
+        %axis off
         title '' Visible off
-        exportgraphics(h3_fig, [heatmapsOutDir '/' 'h3_' num2str(iFrame) '.png'])
+        exportgraphics(h3_fig, [heatmapsOutDir '/' 'h3_' num2str(dShow) '_' num2str(iFrame) '.png'])
     end
 
 %             writerObj = VideoWriter([outfolderName '/' targetName '.mp4'], 'MPEG-4');
