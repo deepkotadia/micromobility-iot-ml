@@ -184,10 +184,10 @@ if 1
             'LineWidth', 2);
     end
 
-    %for iFrame = 0:nFrames-1
-    frames = {0, 49, 98};
-    for k = 1:length(frames)
-        iFrame = frames{k};
+    for iFrame = 0:nFrames-1
+    % frames = {0, 49, 98};
+    % for k = 1:length(frames)
+        % iFrame = frames{k};
         t1.String = [num2str(iFrame) ' frame, ' num2str(Tp*iFrame) ' sec'];
         h1.CData = vMxvdb(:,:,iFrame+1);
         h2.CData = vZMxvdb(:,:,iFrame+1);
@@ -204,26 +204,44 @@ if 1
         pause(Tp);
         
         % Save plots as PNG
-        h1_fig = figure('Visible','off');
-        h1_hax_new = copyobj(h1_hax, h1_fig);
-        set(h1_hax_new, 'Position', get(0, 'DefaultAxesPosition'));
-        %axis off
+        h1_fig_no_axis = figure('Visible','off');
+        h1_hax_no_axis = copyobj(h1_hax, h1_fig_no_axis);
+        set(h1_hax_no_axis, 'Position', get(0, 'DefaultAxesPosition'));
+        axis off
         title '' Visible off
-        exportgraphics(h1_fig, [heatmapsOutDir '/' 'h1_' num2str(dShow) '_' num2str(iFrame) '.png'])
+        exportgraphics(h1_fig_no_axis, [heatmapsOutDir '/' 'allobjects_' num2str(dShow) 'm' '_' 'frame' num2str(iFrame) '_' 'noaxis' '.png'])
 
-        h2_fig = figure('Visible','off');
-        h2_hax_new = copyobj(h2_hax, h2_fig);
-        set(h2_hax_new, 'Position', get(0, 'DefaultAxesPosition'));
-        %axis off
+        h1_fig_axis = figure('Visible','off');
+        h1_hax_axis = copyobj(h1_hax, h1_fig_axis);
+        set(h1_hax_axis, 'Position', get(0, 'DefaultAxesPosition'));
         title '' Visible off
-        exportgraphics(h2_fig, [heatmapsOutDir '/' 'h2_' num2str(dShow) '_' num2str(iFrame) '.png'])
+        exportgraphics(h1_fig_axis, [heatmapsOutDir '/' 'allobjects_' num2str(dShow) 'm' '_' 'frame' num2str(iFrame) '_' 'axis' '.png'])
 
-        h3_fig = figure('Visible','off');
-        h3_hax_new = copyobj(h3_hax, h3_fig);
-        set(h3_hax_new, 'Position', get(0, 'DefaultAxesPosition'));
-        %axis off
+        h2_fig_no_axis = figure('Visible','off');
+        h2_hax_no_axis = copyobj(h2_hax, h2_fig_no_axis);
+        set(h2_hax_no_axis, 'Position', get(0, 'DefaultAxesPosition'));
+        axis off
         title '' Visible off
-        exportgraphics(h3_fig, [heatmapsOutDir '/' 'h3_' num2str(dShow) '_' num2str(iFrame) '.png'])
+        exportgraphics(h2_fig_no_axis, [heatmapsOutDir '/' 'staticobjects_' num2str(dShow) 'm' '_' 'frame' num2str(iFrame) '_' 'noaxis' '.png'])
+
+        h2_fig_axis = figure('Visible','off');
+        h2_hax_axis = copyobj(h2_hax, h2_fig_axis);
+        set(h2_hax_axis, 'Position', get(0, 'DefaultAxesPosition'));
+        title '' Visible off
+        exportgraphics(h2_fig_axis, [heatmapsOutDir '/' 'staticobjects_' num2str(dShow) 'm' '_' 'frame' num2str(iFrame) '_' 'axis' '.png'])
+
+        h3_fig_no_axis = figure('Visible','off');
+        h3_hax_no_axis = copyobj(h3_hax, h3_fig_no_axis);
+        set(h3_hax_no_axis, 'Position', get(0, 'DefaultAxesPosition'));
+        axis off
+        title '' Visible off
+        exportgraphics(h3_fig_no_axis, [heatmapsOutDir '/' 'dynamicobjects_' num2str(dShow) 'm' '_' 'frame' num2str(iFrame) '_' 'noaxis' '.png'])
+
+        h3_fig_axis = figure('Visible','off');
+        h3_hax_axis = copyobj(h3_hax, h3_fig_axis);
+        set(h3_hax_axis, 'Position', get(0, 'DefaultAxesPosition'));
+        title '' Visible off
+        exportgraphics(h3_fig_axis, [heatmapsOutDir '/' 'dynamicobjects_' num2str(dShow) 'm' '_' 'frame' num2str(iFrame) '_' 'axis' '.png'])
     end
 
 %             writerObj = VideoWriter([outfolderName '/' targetName '.mp4'], 'MPEG-4');

@@ -18,6 +18,10 @@ for row = 1:rows
     bin_input_path = ['../OriginalData' '/' scenario '/' bin_filename];
     log_input_path = ['../OriginalData' '/' scenario '/' log_filename];
 
+    if strcmp(scenario, 'firehydrant') == 0
+        continue
+    end
+
     % Create dir for scenario
     heatmaps_scenario_out_dir = [output_base_path '/' scenario];
     if ~exist(heatmaps_scenario_out_dir, 'dir')
