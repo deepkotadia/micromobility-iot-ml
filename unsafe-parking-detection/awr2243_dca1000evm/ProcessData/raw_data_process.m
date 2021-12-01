@@ -135,8 +135,8 @@ vNzMxvdb = mag2db(abs(vNzMxv));
 if 1
     %% pcolor heatmap
     % scale to range of interest
-    dShow = 30;
-    % dShow = 3;
+    % dShow = 30;
+    dShow = 1;
     % pol2cart
     angleDataX = dRange.' * cos(thetaRange2);
     angleDataY = dRange.' * sin(thetaRange2);
