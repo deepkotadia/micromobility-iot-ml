@@ -2,7 +2,6 @@ from os import listdir
 from os.path import isfile, join
 import numpy as np
 import pandas as pd
-from scipy.sparse import data
 from sklearn.model_selection import train_test_split
 
 
@@ -15,8 +14,8 @@ COL_NAMES =['time',
 def read_imu_stream_file(filepath):
     df = pd.read_csv(filepath_or_buffer=filepath, names=COL_NAMES)
     full_data_stream = df[['accl_x', 'accl_y', 'accl_z', 'gyro_x', 'gyro_y', 'gyro_z']]
-    #gyro_df = df[['gyro_x', 'gyro_y', 'gyro_z']]
-    #mag_df = df[['mag_x', 'mag_y', 'mag_z']]
+    # gyro_df = df[['gyro_x', 'gyro_y', 'gyro_z']]
+    # mag_df = df[['mag_x', 'mag_y', 'mag_z']]
     full_data_stream = full_data_stream[150:-150]
     return full_data_stream, full_data_stream.shape[0]
 
@@ -35,87 +34,97 @@ def quantize_and_clean(sensor_reading_triplets, num_triplets_per_window, col_lab
     quantized_df['label'] = feature_label
     return quantized_df
 
-def normalize(full_df_street, full_df_sidewalk, mean, std):
-    '''z normalization (mean 0, std 1)'''
-    mean1 = full_df_sidewalk.mean()
-    mean2 = full_df_street.mean()
-    std1 =  full_df_sidewalk.std()
-    std2 = full_df_street.std()
-    norm_full_df_street = (full_df_street-mean)/std
-    norm_full_df_sidewalk = (full_df_sidewalk-mean)/std
-    '''sanity check'''
-    mean_post = norm_full_df_sidewalk.mean()
-    street_mean_post = norm_full_df_street.mean()
-    sidewalk_std_post = norm_full_df_sidewalk.std()
-    street_std_post = norm_full_df_street.std()
 
-    return norm_full_df_street, norm_full_df_sidewalk
+def normalize(df, mean, std):
+    """
+    z normalization (mean 0, std 1)
+    """
+    normalized_df = (df - mean) / std
+    return normalized_df
 
-    
 
 def read_all_stream_files_in_dir(dir_path, window_size=150):
-    '''reads all data streams as csv, normalize, divide into training samples and label
-        prints data stats and returns dataframe of all training samples'''
-    stats = dict()
-    stats['total_rows_all_stream_files'] = 0
+    """
+    reads all data streams as csv, normalize, divide into training samples and label
+    prints data stats and returns dataframe of all training samples
+    """
     filenames = [f for f in listdir(dir_path) if isfile(join(dir_path, f))]  # get all stream filenames
-    stats['total_stream_files'] = len(filenames)
-    stats['sidewalk_files'], stats['street_files'] = 0, 0
 
-    full_quantized_df = pd.DataFrame()  # dataframe with quantized data from all IMU streams
     col_names = list()
     for i in range(window_size):
         col_names.extend([f'accl_x_{i}', f'accl_y_{i}', f'accl_z_{i}'])
-    full_df_street= pd.DataFrame()
-    full_df_sidewalk = pd.DataFrame()
+
+    # Different types of streets and sidewalks (for secondary labels)
+    df_sidewalk1 = pd.DataFrame()
+    df_sidewalk = pd.DataFrame()
+    df_street1 = pd.DataFrame()
+    df_street2 = pd.DataFrame()
+    df_street3 = pd.DataFrame()
+
     for filename in filenames:
         data_stream, num_rows = read_imu_stream_file(f'{dir_path}/{filename}')
-        stats['total_rows_all_stream_files'] += num_rows
-        if 'sidewalk' in filename:
-            label = 'sidewalk'
-            stats['sidewalk_files'] += 1
-            if full_df_sidewalk.empty:
-                full_df_sidewalk = data_stream
+
+        # append to corresponding df
+        if 'sidewalk1' in filename:
+            if df_sidewalk1.empty:
+                df_sidewalk1 = data_stream
             else: 
-                full_df_sidewalk = full_df_sidewalk.append(data_stream)
-        else:
-            label = 'street'
-            stats['street_files'] += 1
-            if full_df_street.empty: 
-                full_df_street = data_stream
+                df_sidewalk1 = df_sidewalk1.append(data_stream, ignore_index=True)
+        elif 'sidewalk' in filename:
+            if df_sidewalk.empty:
+                df_sidewalk = data_stream
             else:
-                full_df_street = full_df_street.append(data_stream)
-    #stats['sidewalk_files'] = len(full_df_sidewalk)
-    #stats['street_files'] = len(full_df_street)
-    full_df = pd.concat((full_df_sidewalk, full_df_street), axis=0)
-    shape = full_df.shape
+                df_sidewalk = df_sidewalk.append(data_stream, ignore_index=True)
+        elif 'street1' in filename or 'st1' in filename:
+            if df_street1.empty:
+                df_street1 = data_stream
+            else:
+                df_street1 = df_street1.append(data_stream, ignore_index=True)
+        elif 'street2' in filename or 'st2' in filename:
+            if df_street2.empty:
+                df_street2 = data_stream
+            else:
+                df_street2 = df_street2.append(data_stream, ignore_index=True)
+        elif 'street3' in filename or 'st3' in filename:
+            if df_street3.empty:
+                df_street3 = data_stream
+            else:
+                df_street3 = df_street3.append(data_stream, ignore_index=True)
+
+    # normalize all dfs
+    full_df = pd.concat((df_sidewalk1, df_sidewalk, df_street1, df_street2, df_street3), axis=0, ignore_index=True)
     mean = full_df.mean(skipna=True)
     std = full_df.std(skipna=True)
-    stats['mean_values'] = mean
-    stats['std_values'] = std
-    normalized_street, normalized_sidewalk = normalize(full_df_street, full_df_sidewalk, mean, std)
-    #full_df_street['label'] = 1
-    #full_df_sidewalk['label'] = 0
-        # create quantized df using only accelerometer data for now
-    '''accl_quantized_df = quantize_and_clean(accl_df.to_numpy(), window_size, col_names, label)
-        if full_quantized_df.empty:
-            full_quantized_df = accl_quantized_df
-        else:
-            full_quantized_df = full_quantized_df.append(accl_quantized_df, ignore_index=True)
+    normalized_sidewalk1 = normalize(df_sidewalk1, mean, std)
+    normalized_sidewalk = normalize(df_sidewalk, mean, std)
+    normalized_street1 = normalize(df_street1, mean, std)
+    normalized_street2 = normalize(df_street2, mean, std)
+    normalized_street3 = normalize(df_street3, mean, std)
 
-    stats['quantized_df_total_rows'] = full_quantized_df.shape[0]
-    stats['quantized_df_total_cols'] = full_quantized_df.shape[1]'''
-
-    print(stats)
-
-    street_samples = samples_and_feature_extraction(normalized_street)
+    # extract features
+    sidewalk1_samples = samples_and_feature_extraction(normalized_sidewalk1)
     sidewalk_samples = samples_and_feature_extraction(normalized_sidewalk)
-    street_samples['label'] = 1
-    sidewalk_samples['label'] = 0
-    all_samples = pd.concat((street_samples, sidewalk_samples), axis=0)
-    dims = all_samples.shape
+    street1_samples = samples_and_feature_extraction(normalized_street1)
+    street2_samples = samples_and_feature_extraction(normalized_street2)
+    street3_samples = samples_and_feature_extraction(normalized_street3)
+
+    # add secondary labels
+    sidewalk1_samples['sublabel'] = 'sidewalk1'
+    sidewalk_samples['sublabel'] = 'sidewalk'
+    street1_samples['sublabel'] = 'street1'
+    street2_samples['sublabel'] = 'street2'
+    street3_samples['sublabel'] = 'street3'
+
+    # combine different sidewalk and street dfs respectively
+    all_sidewalk_samples = pd.concat((sidewalk1_samples, sidewalk_samples), axis=0, ignore_index=True)
+    all_street_samples = pd.concat((street1_samples, street2_samples, street3_samples), axis=0, ignore_index=True)
+
+    # add primary labels and combine
+    all_sidewalk_samples['label'] = 0
+    all_street_samples['label'] = 1
+    all_samples = pd.concat((all_sidewalk_samples, all_street_samples), axis=0, ignore_index=True)
+
     return all_samples
-    
 
 
 def shuffle_and_split(df, test_size=0.2):
@@ -142,8 +151,6 @@ def samples_and_feature_extraction(dataframe, window_size = 150):
     samples = np.hstack((mean, std, percentile_90th, percentile_10th))
     all_samples = pd.DataFrame(samples, columns=col_names)
     return all_samples
-
-
 
 
 if __name__ == '__main__':
