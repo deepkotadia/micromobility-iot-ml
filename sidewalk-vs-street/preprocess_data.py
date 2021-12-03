@@ -92,7 +92,7 @@ def read_all_stream_files_in_dir(dir_path, window_size=150):
                 df_street3 = df_street3.append(data_stream, ignore_index=True)
 
     # normalize all dfs
-    full_df = pd.concat((df_sidewalk1, df_sidewalk, df_street1, df_street2, df_street3), axis=0)
+    full_df = pd.concat((df_sidewalk1, df_sidewalk, df_street1, df_street2, df_street3), axis=0, ignore_index=True)
     mean = full_df.mean(skipna=True)
     std = full_df.std(skipna=True)
     normalized_sidewalk1 = normalize(df_sidewalk1, mean, std)
@@ -116,12 +116,13 @@ def read_all_stream_files_in_dir(dir_path, window_size=150):
     street3_samples['sublabel'] = 'street3'
 
     # combine different sidewalk and street dfs respectively
-    all_sidewalk_samples = pd.concat((sidewalk1_samples, sidewalk_samples), axis=0)
-    all_street_samples = pd.concat((street1_samples, street2_samples, street3_samples), axis=0)
+    all_sidewalk_samples = pd.concat((sidewalk1_samples, sidewalk_samples), axis=0, ignore_index=True)
+    all_street_samples = pd.concat((street1_samples, street2_samples, street3_samples), axis=0, ignore_index=True)
 
+    # add primary labels and combine
     all_sidewalk_samples['label'] = 0
     all_street_samples['label'] = 1
-    all_samples = pd.concat((all_sidewalk_samples, all_street_samples), axis=0)
+    all_samples = pd.concat((all_sidewalk_samples, all_street_samples), axis=0, ignore_index=True)
 
     return all_samples
 
