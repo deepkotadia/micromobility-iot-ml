@@ -9,7 +9,7 @@ from preprocess_data import read_all_stream_files_in_dir, shuffle_and_split
 from datetime import datetime
 import os
 
-WINDOW_SIZE = 75
+WINDOW_SIZE = 150
 
 if not os.path.isdir("sidewalk-vs-street/imu_classifier_results"):
     os.mkdir("sidewalk-vs-street/imu_classifier_results")
@@ -61,14 +61,18 @@ def model_cross_val_stats(X, y):
     date_time = now.strftime("%Y_%m_%d_%H_%M_%S")
     print(date_time)
     with open("sidewalk-vs-street/imu_classifier_results/street_classifier_{}.txt".format(date_time), mode='w') as res_file:
-        res_file.writelines(results)
+        for key, value in results.items():
+            res_file.write(key +  "--->" + str(value) + "\n")
 
 
 if __name__ == '__main__':
     full_quantized_df = read_all_stream_files_in_dir('IMU_Streams', window_size=WINDOW_SIZE)
 
     shuffled_train_data = full_quantized_df.sample(frac=0.85)
+    
     test_data = full_quantized_df.drop(shuffled_train_data.index).reset_index(drop=True)
+    print("number of training/val samples: ", shuffled_train_data.shape[0])
+    print("number of test samples: ", test_data.shape[0])
     X = shuffled_train_data.reset_index(drop=True).iloc[:, :-1]
     y = shuffled_train_data.iloc[:, -1]
 

@@ -108,8 +108,8 @@ def read_all_stream_files_in_dir(dir_path, window_size=150):
 
     print(stats)
 
-    street_samples = samples_and_feature_extraction(normalized_street)
-    sidewalk_samples = samples_and_feature_extraction(normalized_sidewalk)
+    street_samples = samples_and_feature_extraction(normalized_street, window_size=window_size)
+    sidewalk_samples = samples_and_feature_extraction(normalized_sidewalk, window_size=window_size)
     street_samples['label'] = 1
     sidewalk_samples['label'] = 0
     all_samples = pd.concat((street_samples, sidewalk_samples), axis=0)
