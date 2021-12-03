@@ -135,6 +135,7 @@ dmypy.json
 .idea/
 
 # folders
+imu_classifier_results/
 plots/
 IMU_Streams/
 sidewalk-vs-street/IMU_Streams
