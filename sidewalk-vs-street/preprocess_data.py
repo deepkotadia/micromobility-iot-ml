@@ -1,8 +1,12 @@
 from os import listdir
 from os.path import isfile, join
 import numpy as np
+from numpy.lib.function_base import percentile
 import pandas as pd
+from scipy.sparse import data
 from sklearn.model_selection import train_test_split
+from scipy.signal import savgol_filter, find_peaks
+
 
 
 COL_NAMES =['time',
@@ -54,6 +58,7 @@ def read_all_stream_files_in_dir(dir_path, window_size=150):
     for i in range(window_size):
         col_names.extend([f'accl_x_{i}', f'accl_y_{i}', f'accl_z_{i}'])
 
+
     # Different types of streets and sidewalks (for secondary labels)
     df_sidewalk1 = pd.DataFrame()
     df_sidewalk = pd.DataFrame()
@@ -102,11 +107,12 @@ def read_all_stream_files_in_dir(dir_path, window_size=150):
     normalized_street3 = normalize(df_street3, mean, std)
 
     # extract features
-    sidewalk1_samples = samples_and_feature_extraction(normalized_sidewalk1)
-    sidewalk_samples = samples_and_feature_extraction(normalized_sidewalk)
-    street1_samples = samples_and_feature_extraction(normalized_street1)
-    street2_samples = samples_and_feature_extraction(normalized_street2)
-    street3_samples = samples_and_feature_extraction(normalized_street3)
+    sidewalk1_samples = samples_and_feature_extraction(normalized_sidewalk1, window_size=window_size)
+    sidewalk_samples = samples_and_feature_extraction(normalized_sidewalk, window_size=window_size)
+    street1_samples = samples_and_feature_extraction(normalized_street1, window_size=window_size)
+    street2_samples = samples_and_feature_extraction(normalized_street2, window_size=window_size)
+    street3_samples = samples_and_feature_extraction(normalized_street3, window_size=window_size)
+    
 
     # add secondary labels
     sidewalk1_samples['sublabel'] = 'sidewalk1'
@@ -119,12 +125,19 @@ def read_all_stream_files_in_dir(dir_path, window_size=150):
     all_sidewalk_samples = pd.concat((sidewalk1_samples, sidewalk_samples), axis=0, ignore_index=True)
     all_street_samples = pd.concat((street1_samples, street2_samples, street3_samples), axis=0, ignore_index=True)
 
-    # add primary labels and combine
+    #add primary labels
     all_sidewalk_samples['label'] = 0
     all_street_samples['label'] = 1
-    all_samples = pd.concat((all_sidewalk_samples, all_street_samples), axis=0, ignore_index=True)
 
-    return all_samples
+    # shuffle sidewalk and street internally only
+    sidewalk_train, sidewalk_test =  shuffle_and_split(all_sidewalk_samples, test_size=0.1)
+    street_train, street_test = shuffle_and_split(all_street_samples, test_size=0.1)
+    
+    # combine
+    train = pd.concat((sidewalk_train, street_train), axis=0, ignore_index=True)
+    test = pd.concat((sidewalk_test, street_test), axis=0, ignore_index=True)
+
+    return train, test
 
 
 def shuffle_and_split(df, test_size=0.2):
@@ -132,14 +145,15 @@ def shuffle_and_split(df, test_size=0.2):
     return train, test
 
 
-def samples_and_feature_extraction(dataframe, window_size = 150):
+def samples_and_feature_extraction(dataframe, window_size = 150, filter=None):
     '''divides into training points of size window_size (default 150 samples = 3 seconds)
         computes features (mean, std, percentiles)
-        returns dataframe of dim (num_samples,num_features (24))'''
+        returns dataframe of dim (num_samples,num_features)'''
     col_names = ['mean_accl_x', 'mean_accl_y', 'mean_accl_z', 'mean_gyro_x', 'mean_gyro_y', 
     'mean_gyro_z', 'std_accl_x', 'std_accl_y', 'std_accl_z', 'std_gyro_x', 'std_gyro_y', 'std_gyro_z', 
     '90th_accl_x', '90th_accl_y', '90th_accl_z', '90th_gyro_x', '90th_gyro_y', '90th_gyro_z', 
-    '10th_accl_x', '10th_accl_y', '10th_accl_z', '10th_gyro_x', '10th_gyro_y', '10th_gyro_z']
+    '10th_accl_x', '10th_accl_y', '10th_accl_z', '10th_gyro_x', '10th_gyro_y', '10th_gyro_z', 
+    'range_accl_x', 'range_accl_y', 'range_accl_z', 'range_gyro_x', 'range_gyro_y', 'range_gyro_z']
     idx = dataframe.shape[0] - (dataframe.shape[0] % window_size)
     dataframe = dataframe[:idx]
     num_samples = dataframe.shape[0]/window_size
@@ -148,12 +162,40 @@ def samples_and_feature_extraction(dataframe, window_size = 150):
     std = np.nanstd(splits, axis=1)
     percentile_90th = np.nanpercentile(splits, q=90, axis=1)
     percentile_10th = np.nanpercentile(splits, q=10, axis=1)
-    samples = np.hstack((mean, std, percentile_90th, percentile_10th))
+    spread = percentile_90th - percentile_10th  
+    samples = np.hstack((mean, std, percentile_90th, percentile_10th, spread))
     all_samples = pd.DataFrame(samples, columns=col_names)
+    if filter == 'savgol':
+        num_peaks = np.zeros((len(splits)))
+        for i, split in enumerate(splits):
+            filtered = savgol_filter(split, window_length=5, polyorder=3, axis=1)
+            peaks = find_peaks(filtered)
+            num_peaks[i] = len(peaks)
+        all_samples['num_peaks'] = num_peaks
+    return all_samples
+
+def running_window(dataframe, window_size=75):
+    col_names = ['mean_accl_x', 'mean_accl_y', 'mean_accl_z', 'mean_gyro_x', 'mean_gyro_y', 
+    'mean_gyro_z', 'std_accl_x', 'std_accl_y', 'std_accl_z', 'std_gyro_x', 'std_gyro_y', 'std_gyro_z', 
+    '90th_accl_x', '90th_accl_y', '90th_accl_z', '90th_gyro_x', '90th_gyro_y', '90th_gyro_z', 
+    '10th_accl_x', '10th_accl_y', '10th_accl_z', '10th_gyro_x', '10th_gyro_y', '10th_gyro_z', 
+    'range_accl_x', 'range_accl_y', 'range_accl_z', 'range_gyro_x', 'range_gyro_y', 'range_gyro_z']
+    all_samples = np.zeros((dataframe.shape[0], len(col_names)))
+    all_samples = pd.DataFrame(all_samples, columns=col_names)
+    for i in range(window_size, len(dataframe)):
+        slice = dataframe.iloc[i-window_size:i,:]
+        mean = np.nanmean(slice, axis=0)
+        std = np.nanstd(slice, axis=0)
+        percentile_90th = np.nanpercentile(slice, q=0.9, axis=0)
+        percentile_10th = np.nanpercentile(slice, q=0.1, axis=0)
+        spread = percentile_90th - percentile_10th
+        row = np.hstack((mean, std, percentile_90th, percentile_10th, spread))
+        all_samples.iloc[i,:] = row
+    all_samples = all_samples.iloc[window_size:,:]
     return all_samples
 
 
 if __name__ == '__main__':
-    full_quantized_df = read_all_stream_files_in_dir('IMU_Streams')
-    train_df, test_df = shuffle_and_split(full_quantized_df, test_size=0.2)
+    train, test = read_all_stream_files_in_dir('IMU_Streams')
+    #train_df, test_df = shuffle_and_split(full_quantized_df, test_size=0.2)
     print('Done!')
