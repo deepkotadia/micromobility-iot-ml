@@ -47,7 +47,7 @@ def normalize(df, mean, std):
     return normalized_df
 
 
-def read_all_stream_files_in_dir(dir_path, window_size=150):
+def read_all_stream_files_in_dir(dir_path, window_size=150, mode='fixed'):
     """
     reads all data streams as csv, normalize, divide into training samples and label
     prints data stats and returns dataframe of all training samples
@@ -105,13 +105,23 @@ def read_all_stream_files_in_dir(dir_path, window_size=150):
     normalized_street1 = normalize(df_street1, mean, std)
     normalized_street2 = normalize(df_street2, mean, std)
     normalized_street3 = normalize(df_street3, mean, std)
+    print("done normalizing")
 
     # extract features
+    '''
+    if mode == 'running_window':
+        sidewalk1_samples = running_window(normalized_sidewalk1, window_size=window_size)
+        sidewalk_samples = running_window(normalized_sidewalk, window_size=window_size)
+        street1_samples = running_window(normalized_street1, window_size=window_size)
+        street2_samples = running_window(normalized_street2, window_size=window_size)
+        street3_samples = running_window(normalized_street3, window_size=window_size)'''
+    #elif mode ==  'fixed':
     sidewalk1_samples = samples_and_feature_extraction(normalized_sidewalk1, window_size=window_size)
     sidewalk_samples = samples_and_feature_extraction(normalized_sidewalk, window_size=window_size)
     street1_samples = samples_and_feature_extraction(normalized_street1, window_size=window_size)
     street2_samples = samples_and_feature_extraction(normalized_street2, window_size=window_size)
     street3_samples = samples_and_feature_extraction(normalized_street3, window_size=window_size)
+
     
 
     # add secondary labels
@@ -129,23 +139,27 @@ def read_all_stream_files_in_dir(dir_path, window_size=150):
     all_sidewalk_samples['label'] = 0
     all_street_samples['label'] = 1
 
+    print("number of sidewalk samples: ", len(all_sidewalk_samples))
+    print("number of street samples: ", len(all_street_samples))
+    '''
     # shuffle sidewalk and street internally only
-    sidewalk_train, sidewalk_test =  shuffle_and_split(all_sidewalk_samples, test_size=0.1)
-    street_train, street_test = shuffle_and_split(all_street_samples, test_size=0.1)
+    sidewalk_train, sidewalk_test = shuffle_and_split(all_sidewalk_samples, test_size=0.1, shuffle=False)
+    street_train, street_test = shuffle_and_split(all_street_samples, test_size=0.1, shuffle=False)
     
     # combine
     train = pd.concat((sidewalk_train, street_train), axis=0, ignore_index=True)
-    test = pd.concat((sidewalk_test, street_test), axis=0, ignore_index=True)
+    test = pd.concat((sidewalk_test, street_test), axis=0, ignore_index=True)'''
+    #combine:
+    all_samples = pd.concat((all_sidewalk_samples, all_street_samples),axis=0, ignore_index=True)
+    return all_samples
 
+
+def shuffle_and_split(df, test_size=0.2, shuffle=True):
+    train, test = train_test_split(df, test_size=test_size, shuffle=shuffle)
     return train, test
 
 
-def shuffle_and_split(df, test_size=0.2):
-    train, test = train_test_split(df, test_size=test_size, shuffle=True)
-    return train, test
-
-
-def samples_and_feature_extraction(dataframe, window_size = 150, filter=None):
+def samples_and_feature_extraction(dataframe, window_size=150, filter=None):
     '''divides into training points of size window_size (default 150 samples = 3 seconds)
         computes features (mean, std, percentiles)
         returns dataframe of dim (num_samples,num_features)'''
@@ -157,7 +171,8 @@ def samples_and_feature_extraction(dataframe, window_size = 150, filter=None):
     idx = dataframe.shape[0] - (dataframe.shape[0] % window_size)
     dataframe = dataframe[:idx]
     num_samples = dataframe.shape[0]/window_size
-    splits = np.array(np.vsplit(dataframe, num_samples))
+    np_df = dataframe.to_numpy()
+    splits = np.array(np.vsplit(np_df, num_samples))
     mean = np.nanmean(splits, axis=1)
     std = np.nanstd(splits, axis=1)
     percentile_90th = np.nanpercentile(splits, q=90, axis=1)

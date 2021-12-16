@@ -13,6 +13,8 @@ import os
 import matplotlib.pyplot as plt
 from collections import Counter, defaultdict
 import pandas as pd
+import lightgbm as lgb
+import xgboost as xgb
 
 #HYPERPARAMETERS
 WINDOW_SIZE = 75
@@ -31,7 +33,7 @@ def run_all_model_cross_val_stats(X, y):
     print(date_time)
     res_file =  open("sidewalk-vs-street/imu_classifier_results/street_classifier_{}.txt".format(date_time), mode='w')
     results = dict()
-    '''
+    
     val_score, train_score, scores = run_logistic_regression(X, y)
     res_file.write("Logistic Regression Classifier CV: val_score: {}, train_scores: {} \n".format(val_score, train_score))
     results['Logistic Regression Classifier CV:'] = scores
@@ -61,7 +63,7 @@ def run_all_model_cross_val_stats(X, y):
     res_file.write("Gradient Boosting Classifier CV: val_score: {}, train_scores: {} \n".format(val_score, train_score) )
     print(gbc_res)
     results['Gradient Boosting Classifier CV:'] = gbc_res
-    print('.....')'''
+    print('.....')
 
     val_score, train_score, rfc_res = run_random_forest(X, y, n_estimators, max_depth, max_features)
     res_file.write("Random Forest Classifier CV: val_score: {}, train_scores: {} \n".format(val_score, train_score) )
@@ -133,10 +135,18 @@ def parameter_tuning_rf(X_train, y_train, X_test, y_test):
     print('initializing params search...')
     clf.fit(X_train, y_train)
     print('fitted best model')
+    
     best_rf = clf.best_estimator_
     best_score = clf.best_score_
     best_params = clf.best_params_
     y_pred = clf.predict(X_test)
+    print("pre smoothing")
+    f1 = f1_score(y_test, y_pred)
+    prec = precision_score(y_test, y_pred)
+    recall = recall_score(y_test, y_pred)
+    print("f1: ", f1)
+    print("precision ", prec)
+    print("recall ", recall)
     #output smoothing (by most common of last 5 outputs)
     for i in range(SMOOTH_STEP, len(y_pred), SMOOTH_STEP):
         slice = y_pred[i-SMOOTH_STEP:i]
@@ -147,14 +157,18 @@ def parameter_tuning_rf(X_train, y_train, X_test, y_test):
     #confusion_matrix = confusion_matrix(y_test, y_pred)
     disp1 = ConfusionMatrixDisplay(confusion_matrix(y_test, y_pred), display_labels=['sidewalk', 'street'])
     disp1.plot()
+    print("post smoothing")
     f1 = f1_score(y_test, y_pred)
     prec = precision_score(y_test, y_pred)
     recall = recall_score(y_test, y_pred)
+    print("f1: ", f1)
+    print("precision ", prec)
+    print("recall ", recall)
     prec, recall, _ = precision_recall_curve(y_test, y_pred)
     disp2 = PrecisionRecallDisplay(precision=prec, recall=recall)
     disp2.plot()
     plt.show()
-
+    
     with open("sidewalk-vs-street/imu_classifier_results/random_forest_search_{}.txt".format(date_time), 'w') as res_file:
         res_file.write("Random Forest Classifier Grid Search: \n")
         res_file.write("best val score: " + str(best_score)+'\n')
@@ -171,11 +185,12 @@ def compare_by_sublabel(y_pred, y_test, sublabels, title):
             results[sublabels[i] + ' correct'] +=1
         else:
             results[sublabels[i] + " wrong"] +=1
+    print(results)
+    print(sum(results.values()))
     plt.bar(x=results.keys(), height=results.values())
     plt.title(title)
     plt.savefig(title+'.png')
     plt.show()
-
 
 def majority_vote(lst):
     data = Counter(lst)
@@ -184,7 +199,7 @@ def majority_vote(lst):
 def run_classifier_rf(X_train, y_train, X_test, y_test, max_depth, max_features, n_estimators, SMOOTH_STEP):
     now = datetime.now()
     date_time = now.strftime("%Y_%m_%d_%H_%M_%S")
-    rfc_clf = RandomForestClassifier(max_depth=max_depth, max_features=max_features, n_estimators=n_estimators)
+    rfc_clf = RandomForestClassifier()
     rfc_clf.fit(X_train, y_train)
     y_pred = rfc_clf.predict(X_test)
     disp1 = ConfusionMatrixDisplay(confusion_matrix(y_test, y_pred), display_labels=['sidewalk', 'street'])
@@ -213,21 +228,41 @@ def run_classifier_rf(X_train, y_train, X_test, y_test, max_depth, max_features,
     print("recall {} recall smooth {}".format(recall, recall_smooth))
     print("done!")
     return y_pred, y_pred_smooth
+
+
+def run_lgbm(X_train, y_train, X_test, Y_test):
+    print('light gradient boosted machine')
+    now = datetime.now()
+    date_time = now.strftime("%Y_%m_%d_%H_%M_%S")
+    X_train = X_train.to_numpy()
+    y_train = y_train.to_numpy()
+    train = lgb.Dataset(X_train, label=y_train)
+    params = {'objective':'binary'}
+    print('starting cross validate')
+    eval_hist = lgb.cv(params, train)
+    print(eval_hist)
+    with open("sidewalk-vs-street/imu_classifier_results/lgb_results_{}.txt".format(date_time), mode='w') as file:
+        file.write(eval_hist)
+    print("done, results written to file")
+    
     
 
 if __name__ == '__main__':
-    #train, test = read_all_stream_files_in_dir('IMU_Streams', window_size=WINDOW_SIZE)
+    mode='fixed'
+    #train, test = read_all_stream_files_in_dir('IMU_Streams', window_size=WINDOW_SIZE, mode=mode)
     #print("dataset generated")
-    #train.to_csv("IMU_Streams/train_samples_running_window.csv")
-    #test.to_csv("IMU_Streams/test_samples_running_window.csv")
-
-    print('saved to csv')
+    #train.to_csv("IMU_Streams/train_samples_{}.csv".format(mode))
+    #test.to_csv("IMU_Streams/test_samples_{}.csv".format(mode))
+    print("mode: ", mode)
+    #print('saved to csv')
+    all_samples = read_all_stream_files_in_dir("IMU_Streams", window_size=WINDOW_SIZE, mode=mode)
 
     
-    #train, test = shuffle_and_split(full_quantized_df, test_size=0.001)
+    train, test = shuffle_and_split(all_samples, test_size=0.20)
     #load train and test files:
-    #train = pd.read_csv("IMU_Streams/train_samples_running_window.csv")
-    #test = pd.read_csv("IMU_Streams/test_samples_running_window.csv")
+    #train = pd.read_csv("IMU_Streams/train_samples_{}.csv".format(mode))
+    #test = pd.read_csv("IMU_Streams/test_samples_{}.csv".format(mode))
+    #print('loaded data from csv')
     
     print("number of training/val samples: ", train.shape[0])
     print("number of test samples: ", test.shape[0])
@@ -238,12 +273,16 @@ if __name__ == '__main__':
     sublabels_test = test.iloc[:,-2]
     y_test = test.iloc[:, -1]
     #parameter_tuning_rf(X_train, y_train, X_test, y_test)
-    run_all_model_cross_val_stats(X_train, y_train)
-    '''step_tests = np.array([3, 5, 8, 10])
+    #run_lgbm(X_train, y_train, X_test, y_test)
+    all_data = pd.concat((X_train, X_test), axis=0)
+    all_data_y = pd.concat((y_train, y_test), axis=0)
+    run_all_model_cross_val_stats(all_data, all_data_y)
+    '''
+    step_tests = np.array([3, 5, 8, 10])
     print("starting experiments")
     for step in step_tests:
         print("smoothing steps: {}".format(step))
-        title = 'classifications_by_sublabel'
+        title = 'classifications_by_sublabel_'
         y_pred, y_pred_smooth = run_classifier_rf(X_train, y_train, X_test, y_test, max_depth, max_features, n_estimators, step)
         compare_by_sublabel(y_pred, y_test, sublabels_test, title=title)
         compare_by_sublabel(y_pred_smooth, y_test, sublabels_test, title=title+"smooth_level_{}".format(step))
