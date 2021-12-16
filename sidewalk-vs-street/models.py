@@ -178,18 +178,40 @@ def parameter_tuning_rf(X_train, y_train, X_test, y_test):
     print('done! results written to file')  
 
 def compare_by_sublabel(y_pred, y_test, sublabels, title):
-    results = defaultdict(int)
+    correct_results = defaultdict(int)
+    wrong_results = defaultdict(int)
     for i in range(len(sublabels)):
         if y_pred[i] == y_test[i]:
-            results[sublabels[i] + ' correct'] +=1
+            correct_results[sublabels[i]] +=1
         else:
-            results[sublabels[i] + " wrong"] +=1
-    print(results)
-    print(sum(results.values()))
-    plt.bar(x=results.keys(), height=results.values())
+            wrong_results[sublabels[i]] +=1
+    print("correct: ", correct_results)
+    print("wrong: ", wrong_results)
+    print("total correct: ", sum(correct_results.values()))
+    print("total incorrect: ", sum(wrong_results.values()))
+    '''fig, ax = plt.subplots(1, 2)
+    ax[0].bar(x=correct_results.keys(), height=correct_results.values(), color='g')
+    ax[1].bar(x=wrong_results.keys(), height=wrong_results.values(), color='r')
+    ax[0].set_ylabel("number of samples")
+    ax[0].set_xlabel("sublabel identity")
+    ax[1].set_ylabel("number of samples")
+    ax[1].set_xlabel("sublabel identity")
+    ax[0].set_title("correctly classified samples from each subclass")
+    ax[1].set_title("wrongly classified samples from each subclass")
+    #plt.bar(x=results.keys(), height=results.values(), color=['red', 'blue', 'green', 'purple', 'orange'])
     plt.title(title)
+    #ax.set_xticks(correct_results.keys())
+    #ax.legends(labels=['correct', 'misclassified'])
     plt.savefig(title+'.png')
-    plt.show()
+    plt.show()'''
+    with open("comparison_by_sublabel_{}".format(title), mode='w') as file:
+        file.write("correct results\n")
+        for key, val in zip(correct_results.keys(), correct_results.values()):
+            file.write(key+"--->"+str(val)+'\n')
+        file.write("wrong results\n")
+        for key, val in zip(wrong_results.keys(), wrong_results.values()):
+            file.write(key+"--->"+str(val)+'\n')
+
 
 def majority_vote(lst):
     data = Counter(lst)
@@ -207,6 +229,7 @@ def run_classifier_rf(X_train, y_train, X_test, y_test, max_depth, max_features,
     prec = precision_score(y_test, y_pred)
     recall = recall_score(y_test, y_pred)
     #output smoothing (by most common of last 5 outputs)
+    plt.close()
     y_pred_smooth = np.zeros_like(y_pred)
     for i in range(SMOOTH_STEP, len(y_pred), SMOOTH_STEP):
         slice = y_pred[i-SMOOTH_STEP:i]
@@ -226,6 +249,7 @@ def run_classifier_rf(X_train, y_train, X_test, y_test, max_depth, max_features,
     print("precision {} smoothed precision {}".format(prec, prec_smooth))
     print("recall {} recall smooth {}".format(recall, recall_smooth))
     print("done!")
+    plt.close()
     return y_pred, y_pred_smooth
 
 
@@ -249,7 +273,7 @@ def run_lgbm(X_train, y_train, X_test, Y_test):
 if __name__ == '__main__':
      #HYPERPARAMETERS
     mode='running_window'
-    test_size = 0.20
+    test_size = 0.80
     shuffle = True
     WINDOW_SIZE = 75
     kernel = 'rbf'
@@ -263,34 +287,50 @@ if __name__ == '__main__':
     
 
     #print('saved to csv')
-    #train, test = read_all_stream_files_in_dir("IMU_Streams", test_size=test_size, shuffle=shuffle, window_size=WINDOW_SIZE, mode=mode)
-    #train.to_csv("IMU_Streams/train_samples_{}_shuffled.csv".format(mode))
-    #test.to_csv("IMU_Streams/test_samples_{}_shuffled.csv".format(mode))
+    train, test = read_all_stream_files_in_dir("IMU_Streams", test_size=test_size, shuffle=shuffle, window_size=WINDOW_SIZE, mode=mode)
+    train.to_csv("IMU_Streams/train_samples_{}_shuffled_80.csv".format(mode))
+    test.to_csv("IMU_Streams/test_samples_{}_shuffled_80.csv".format(mode))
     
     #train, test = shuffle_and_split(all_samples, test_size=0.20, shuffle=True)
     #load train and test files:
-    train = pd.read_csv("IMU_Streams/train_samples_{}_shuffled.csv".format(mode))
-    test = pd.read_csv("IMU_Streams/test_samples_{}_shuffled.csv".format(mode))
+    train = pd.read_csv("IMU_Streams/train_samples_{}_shuffled_80.csv".format(mode))
+    test = pd.read_csv("IMU_Streams/test_samples_{}_shuffled_80.csv".format(mode))
     print('loaded data from csv')
     
     print("number of training/val samples: ", train.shape[0])
     print("number of test samples: ", test.shape[0])
+    
     X_train = train.iloc[:, :-2]
     sublabels = train.iloc[:,-2]
     y_train = train.iloc[:, -1]
     X_test = test.iloc[:,:-2]
     sublabels_test = test.iloc[:,-2]
     y_test = test.iloc[:, -1]
+    print('number of sublabels in train and test: {} {}'.format(len(sublabels), len(sublabels_test)))
     #parameter_tuning_rf(X_train, y_train, X_test, y_test)
     #run_lgbm(X_train, y_train, X_test, y_test)
     #all_data = pd.concat((X_train, X_test), axis=0)
-    #all_data_y = pd.concat((y_train, y_test), axis=0)
+    #all_data_y = pd.concat
+    #((y_train, y_test), axis=0)
     #run_all_model_cross_val_stats(X_train, y_train, max_depth=max_depth, max_features=max_features, n_estimators=n_estimators)
-    val_score, train_score, full_results = run_random_forest(X_train, y_train, n_estimators=n_estimators, max_depth=max_depth, max_features=max_features)
-    print("random forest")
-    print("val score: ", val_score)
-    print("train score ", train_score)
-    print("full scores: ", full_results)
+    #val_score, train_score, full_results = run_random_forest(X_train, y_train, n_estimators=n_estimators, max_depth=max_depth, max_features=max_features)
+    #print("random forest")
+    #print("val score: ", val_score)
+    #print("train score ", train_score)
+    #print("full scores: ", full_results)
+    y_pred, y_pred_smooth = run_classifier_rf(X_train, y_train, X_test, y_test, max_depth=max_depth, 
+    max_features=max_features, n_estimators=n_estimators, SMOOTH_STEP=SMOOTH_STEP)
+    print(len(y_test))
+    print(len(y_pred))
+    y_pred = np.array(y_pred).reshape(-1,1)
+    y_pred_smooth = np.array(y_pred_smooth).reshape(-1,1)
+    y_test = np.array(y_test).reshape(-1,1)
+    np.savetxt('y_pred.csv', np.hstack((y_pred, y_test)), delimiter=',')
+    np.savetxt('y_pred_smooth.csv', np.hstack((y_pred_smooth, y_test)), delimiter=',')
+    compare_by_sublabel(y_pred, y_test, sublabels_test, title='sublabel_comparison_rf_running_win_reg')
+    plt.close()
+    compare_by_sublabel(y_pred_smooth, y_test, sublabels_test, title='sublabel_comparison_rf_run_win_smoothed')
+    
     '''
     step_tests = np.array([3, 5, 8, 10])
     print("starting experiments")
