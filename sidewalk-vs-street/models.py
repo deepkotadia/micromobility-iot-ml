@@ -21,10 +21,15 @@ import xgboost as xgb
 if not os.path.isdir("sidewalk-vs-street/imu_classifier_results"):
     os.mkdir("sidewalk-vs-street/imu_classifier_results")
 
-def run_all_model_cross_val_stats(X, y):
+def run_all_model_cross_val_stats(X, y, max_depth=None, max_features='auto', n_estimators=100, svc_kernel='rbf'):
     now = datetime.now()
     date_time = now.strftime("%Y_%m_%d_%H_%M_%S")
     print(date_time)
+    print("training settings: ")
+    print("max depth trees: ", max_depth)
+    print("max features trees: ", max_features)
+    print("N_estimators trees: ", n_estimators)
+    print("svc kernel: ", kernel)
     res_file =  open("sidewalk-vs-street/imu_classifier_results/street_classifier_{}.txt".format(date_time), mode='w')
     results = dict()
     
@@ -244,13 +249,13 @@ def run_lgbm(X_train, y_train, X_test, Y_test):
 if __name__ == '__main__':
      #HYPERPARAMETERS
     mode='fixed'
-    test_size = 0.01
+    test_size = 0.001
     shuffle = False
     WINDOW_SIZE = 75
     kernel = 'rbf'
-    n_estimators = 300
-    max_features = 'log2'
-    max_depth = 6
+    n_estimators = 100
+    max_features = 'auto'
+    max_depth = None
     SMOOTH_STEP = 5
     #train, test = read_all_stream_files_in_dir('IMU_Streams', window_size=WINDOW_SIZE, mode=mode)
     #print("dataset generated")
@@ -259,7 +264,7 @@ if __name__ == '__main__':
     
 
     #print('saved to csv')
-    train, test = read_all_stream_files_in_dir("IMU_Streams", test_size=test_size, window_size=WINDOW_SIZE, mode=mode)
+    train, test = read_all_stream_files_in_dir("IMU_Streams", test_size=test_size, shuffle=shuffle, window_size=WINDOW_SIZE, mode=mode)
 
     
     #train, test = shuffle_and_split(all_samples, test_size=0.20, shuffle=True)
@@ -280,7 +285,7 @@ if __name__ == '__main__':
     #run_lgbm(X_train, y_train, X_test, y_test)
     #all_data = pd.concat((X_train, X_test), axis=0)
     #all_data_y = pd.concat((y_train, y_test), axis=0)
-    run_all_model_cross_val_stats(X_train, y_train)
+    run_all_model_cross_val_stats(X_train, y_train, max_depth=max_depth, max_features=max_features, n_estimators=n_estimators)
     '''
     step_tests = np.array([3, 5, 8, 10])
     print("starting experiments")
