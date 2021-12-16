@@ -248,9 +248,9 @@ def run_lgbm(X_train, y_train, X_test, Y_test):
 
 if __name__ == '__main__':
      #HYPERPARAMETERS
-    mode='fixed'
-    test_size = 0.001
-    shuffle = False
+    mode='running_window'
+    test_size = 0.20
+    shuffle = True
     WINDOW_SIZE = 75
     kernel = 'rbf'
     n_estimators = 100
@@ -259,19 +259,19 @@ if __name__ == '__main__':
     SMOOTH_STEP = 5
     #train, test = read_all_stream_files_in_dir('IMU_Streams', window_size=WINDOW_SIZE, mode=mode)
     #print("dataset generated")
-    #train.to_csv("IMU_Streams/train_samples_{}.csv".format(mode))
-    #test.to_csv("IMU_Streams/test_samples_{}.csv".format(mode))
+
     
 
     #print('saved to csv')
-    train, test = read_all_stream_files_in_dir("IMU_Streams", test_size=test_size, shuffle=shuffle, window_size=WINDOW_SIZE, mode=mode)
-
+    #train, test = read_all_stream_files_in_dir("IMU_Streams", test_size=test_size, shuffle=shuffle, window_size=WINDOW_SIZE, mode=mode)
+    #train.to_csv("IMU_Streams/train_samples_{}_shuffled.csv".format(mode))
+    #test.to_csv("IMU_Streams/test_samples_{}_shuffled.csv".format(mode))
     
     #train, test = shuffle_and_split(all_samples, test_size=0.20, shuffle=True)
     #load train and test files:
-    #train = pd.read_csv("IMU_Streams/train_samples_{}.csv".format(mode))
-    #test = pd.read_csv("IMU_Streams/test_samples_{}.csv".format(mode))
-    #print('loaded data from csv')
+    train = pd.read_csv("IMU_Streams/train_samples_{}_shuffled.csv".format(mode))
+    test = pd.read_csv("IMU_Streams/test_samples_{}_shuffled.csv".format(mode))
+    print('loaded data from csv')
     
     print("number of training/val samples: ", train.shape[0])
     print("number of test samples: ", test.shape[0])
@@ -285,7 +285,12 @@ if __name__ == '__main__':
     #run_lgbm(X_train, y_train, X_test, y_test)
     #all_data = pd.concat((X_train, X_test), axis=0)
     #all_data_y = pd.concat((y_train, y_test), axis=0)
-    run_all_model_cross_val_stats(X_train, y_train, max_depth=max_depth, max_features=max_features, n_estimators=n_estimators)
+    #run_all_model_cross_val_stats(X_train, y_train, max_depth=max_depth, max_features=max_features, n_estimators=n_estimators)
+    val_score, train_score, full_results = run_random_forest(X_train, y_train, n_estimators=n_estimators, max_depth=max_depth, max_features=max_features)
+    print("random forest")
+    print("val score: ", val_score)
+    print("train score ", train_score)
+    print("full scores: ", full_results)
     '''
     step_tests = np.array([3, 5, 8, 10])
     print("starting experiments")

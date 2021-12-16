@@ -113,21 +113,19 @@ def read_all_stream_files_in_dir(dir_path, test_size=0.15, window_size=150, mode
     print("done normalizing")
 
     # extract features
-    '''
+    
     if mode == 'running_window':
         sidewalk1_samples = running_window(normalized_sidewalk1, window_size=window_size)
         sidewalk_samples = running_window(normalized_sidewalk, window_size=window_size)
         street1_samples = running_window(normalized_street1, window_size=window_size)
         street2_samples = running_window(normalized_street2, window_size=window_size)
-        street3_samples = running_window(normalized_street3, window_size=window_size)'''
-    #elif mode ==  'fixed':
-    sidewalk1_samples = samples_and_feature_extraction(normalized_sidewalk1, window_size=window_size)
-    sidewalk_samples = samples_and_feature_extraction(normalized_sidewalk, window_size=window_size)
-    street1_samples = samples_and_feature_extraction(normalized_street1, window_size=window_size)
-    street2_samples = samples_and_feature_extraction(normalized_street2, window_size=window_size)
-    street3_samples = samples_and_feature_extraction(normalized_street3, window_size=window_size)
-
-    
+        street3_samples = running_window(normalized_street3, window_size=window_size)
+    elif mode ==  'fixed':
+        sidewalk1_samples = samples_and_feature_extraction(normalized_sidewalk1, window_size=window_size)
+        sidewalk_samples = samples_and_feature_extraction(normalized_sidewalk, window_size=window_size)
+        street1_samples = samples_and_feature_extraction(normalized_street1, window_size=window_size)
+        street2_samples = samples_and_feature_extraction(normalized_street2, window_size=window_size)
+        street3_samples = samples_and_feature_extraction(normalized_street3, window_size=window_size)
 
     # add secondary labels
     sidewalk1_samples['sublabel'] = 'sidewalk1'
@@ -146,14 +144,21 @@ def read_all_stream_files_in_dir(dir_path, test_size=0.15, window_size=150, mode
 
     print("number of sidewalk samples: ", len(all_sidewalk_samples))
     print("number of street samples: ", len(all_street_samples))
+
+    all_samples = pd.concat((all_sidewalk_samples, all_street_samples), axis=0, ignore_index=True)
+    train, test = shuffle_and_split(all_samples, test_size=test_size, shuffle=True)
+    '''
+    #shuffle sidewalk and street internally only
+    sidewalk_train, sidewalk_test = shuffle_and_split(all_sidewalk_samples, test_size=test_size, shuffle=True)
+    street_train, street_test = shuffle_and_split(all_street_samples, test_size=test_size, shuffle=True)
     
-    # shuffle sidewalk and street internally only
-    sidewalk_train, sidewalk_test = shuffle_and_split(all_sidewalk_samples, test_size=test_size, shuffle=shuffle)
-    street_train, street_test = shuffle_and_split(all_street_samples, test_size=test_size, shuffle=shuffle)
-    
-    # combine
+    #combine
     train = pd.concat((sidewalk_train, street_train), axis=0, ignore_index=True)
     test = pd.concat((sidewalk_test, street_test), axis=0, ignore_index=True)
+    '''
+
+
+
     #combine:
     #all_samples = pd.concat((all_sidewalk_samples, all_street_samples), axis=0, ignore_index=True)
     return train, test
