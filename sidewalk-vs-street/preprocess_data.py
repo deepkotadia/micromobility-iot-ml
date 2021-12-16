@@ -6,6 +6,7 @@ import pandas as pd
 from scipy.sparse import data
 from sklearn.model_selection import train_test_split
 from scipy.signal import savgol_filter, find_peaks
+from sklearn.utils import shuffle
 
 
 
@@ -47,7 +48,11 @@ def normalize(df, mean, std):
     return normalized_df
 
 
-def read_all_stream_files_in_dir(dir_path, window_size=150, mode='fixed'):
+def read_all_stream_files_in_dir(dir_path, test_size=0.15, window_size=150, mode='fixed', shuffle=True):
+    print("parameters for data preprocessing: ")
+    print("mode: ", mode)
+    print("Shuffle: ", shuffle)
+    print("window size: ", window_size)
     """
     reads all data streams as csv, normalize, divide into training samples and label
     prints data stats and returns dataframe of all training samples
@@ -141,17 +146,17 @@ def read_all_stream_files_in_dir(dir_path, window_size=150, mode='fixed'):
 
     print("number of sidewalk samples: ", len(all_sidewalk_samples))
     print("number of street samples: ", len(all_street_samples))
-    '''
+    
     # shuffle sidewalk and street internally only
-    sidewalk_train, sidewalk_test = shuffle_and_split(all_sidewalk_samples, test_size=0.1, shuffle=False)
-    street_train, street_test = shuffle_and_split(all_street_samples, test_size=0.1, shuffle=False)
+    sidewalk_train, sidewalk_test = shuffle_and_split(all_sidewalk_samples, test_size=test_size, shuffle=shuffle)
+    street_train, street_test = shuffle_and_split(all_street_samples, test_size=test_size, shuffle=shuffle)
     
     # combine
     train = pd.concat((sidewalk_train, street_train), axis=0, ignore_index=True)
-    test = pd.concat((sidewalk_test, street_test), axis=0, ignore_index=True)'''
+    test = pd.concat((sidewalk_test, street_test), axis=0, ignore_index=True)
     #combine:
-    all_samples = pd.concat((all_sidewalk_samples, all_street_samples),axis=0, ignore_index=True)
-    return all_samples
+    #all_samples = pd.concat((all_sidewalk_samples, all_street_samples), axis=0, ignore_index=True)
+    return train, test
 
 
 def shuffle_and_split(df, test_size=0.2, shuffle=True):

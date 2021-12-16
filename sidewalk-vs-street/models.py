@@ -16,13 +16,7 @@ import pandas as pd
 import lightgbm as lgb
 import xgboost as xgb
 
-#HYPERPARAMETERS
-WINDOW_SIZE = 75
-kernel = 'rbf'
-n_estimators = 300
-max_features = 'log2'
-max_depth = 6
-SMOOTH_STEP = 5
+
 
 if not os.path.isdir("sidewalk-vs-street/imu_classifier_results"):
     os.mkdir("sidewalk-vs-street/imu_classifier_results")
@@ -248,17 +242,27 @@ def run_lgbm(X_train, y_train, X_test, Y_test):
     
 
 if __name__ == '__main__':
+     #HYPERPARAMETERS
     mode='fixed'
+    test_size = 0.01
+    shuffle = False
+    WINDOW_SIZE = 75
+    kernel = 'rbf'
+    n_estimators = 300
+    max_features = 'log2'
+    max_depth = 6
+    SMOOTH_STEP = 5
     #train, test = read_all_stream_files_in_dir('IMU_Streams', window_size=WINDOW_SIZE, mode=mode)
     #print("dataset generated")
     #train.to_csv("IMU_Streams/train_samples_{}.csv".format(mode))
     #test.to_csv("IMU_Streams/test_samples_{}.csv".format(mode))
-    print("mode: ", mode)
+    
+
     #print('saved to csv')
-    all_samples = read_all_stream_files_in_dir("IMU_Streams", window_size=WINDOW_SIZE, mode=mode)
+    train, test = read_all_stream_files_in_dir("IMU_Streams", test_size=test_size, window_size=WINDOW_SIZE, mode=mode)
 
     
-    train, test = shuffle_and_split(all_samples, test_size=0.20)
+    #train, test = shuffle_and_split(all_samples, test_size=0.20, shuffle=True)
     #load train and test files:
     #train = pd.read_csv("IMU_Streams/train_samples_{}.csv".format(mode))
     #test = pd.read_csv("IMU_Streams/test_samples_{}.csv".format(mode))
@@ -274,9 +278,9 @@ if __name__ == '__main__':
     y_test = test.iloc[:, -1]
     #parameter_tuning_rf(X_train, y_train, X_test, y_test)
     #run_lgbm(X_train, y_train, X_test, y_test)
-    all_data = pd.concat((X_train, X_test), axis=0)
-    all_data_y = pd.concat((y_train, y_test), axis=0)
-    run_all_model_cross_val_stats(all_data, all_data_y)
+    #all_data = pd.concat((X_train, X_test), axis=0)
+    #all_data_y = pd.concat((y_train, y_test), axis=0)
+    run_all_model_cross_val_stats(X_train, y_train)
     '''
     step_tests = np.array([3, 5, 8, 10])
     print("starting experiments")
