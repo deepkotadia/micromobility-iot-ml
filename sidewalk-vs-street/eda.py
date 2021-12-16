@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import scipy.signal
+import seaborn as sns
+from preprocess_data import *
 
 
 def plot_from_accelerometer_df(df, frequency, dataset_id, apply_filter=False):
@@ -39,8 +41,21 @@ def plot_from_accelerometer_df(df, frequency, dataset_id, apply_filter=False):
         plt.title('Accelerometer Readings for three axes over Time for {0}'.format(dataset_id))
         plt.show()
 
+def feature_analysis():
+    samples = read_all_stream_files_in_dir('IMU_Streams')
+    corr= samples.corr()
+    mask = np.triu(np.ones_like(corr, dtype=bool))
+    cmap = sns.diverging_palette(230, 20, as_cmap=True)
 
+    sns.heatmap(corr, mask=mask, cmap=cmap, vmax=.3, center=0,
+            square=True, linewidths=.5, cbar_kws={"shrink": .5})
+    plt.show()
+    print("done!")
+    #sns.show()
+
+feature_analysis()
 # Read accelerometer data from all three CSV files
+'''
 col_names=['time',
            'accl_id', 'accl_x', 'accl_y', 'accl_z',
            'gyro_id', 'gyro_x', 'gyro_y', 'gyro_z',
@@ -51,4 +66,4 @@ c = pd.read_csv(filepath_or_buffer='IMU_Streams/street1MedBweight1.csv', names=c
 
 plot_from_accelerometer_df(a, 50, 'sidewalk Med Weight', apply_filter=True)
 plot_from_accelerometer_df(b, 50, 'street Med Weight', apply_filter=True)
-# plot_from_accelerometer_df(c, 50, 'street Med Weight')
+# plot_from_accelerometer_df(c, 50, 'street Med Weight')'''
