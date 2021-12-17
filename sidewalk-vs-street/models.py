@@ -30,6 +30,8 @@ def run_all_model_cross_val_stats(X, y, max_depth=None, max_features='auto', n_e
     print("max features trees: ", max_features)
     print("N_estimators trees: ", n_estimators)
     print("svc kernel: ", kernel)
+    print("dataset size: ", len(X))
+    print(len(y))
     res_file =  open("sidewalk-vs-street/imu_classifier_results/street_classifier_{}.txt".format(date_time), mode='w')
     results = dict()
     '''
@@ -218,6 +220,9 @@ def majority_vote(lst):
     return max(lst, key=data.get)
 
 def run_classifier_rf(X_train, y_train, X_test, y_test, max_depth, max_features, n_estimators, SMOOTH_STEP):
+    print("dataset size: ")
+    print("train: ", len(X_train))
+    print("test: ", len(X_test))
     now = datetime.now()
     date_time = now.strftime("%Y_%m_%d_%H_%M_%S")
     rfc_clf = RandomForestClassifier()
@@ -228,8 +233,9 @@ def run_classifier_rf(X_train, y_train, X_test, y_test, max_depth, max_features,
     f1 = f1_score(y_test, y_pred)
     prec = precision_score(y_test, y_pred)
     recall = recall_score(y_test, y_pred)
+    plt.show()
     #output smoothing (by most common of last 5 outputs)
-    #plt.close()
+    plt.close()
     y_pred_smooth = np.zeros_like(y_pred)
     for i in range(SMOOTH_STEP, len(y_pred), SMOOTH_STEP):
         slice = y_pred[i-SMOOTH_STEP:i]
@@ -239,6 +245,7 @@ def run_classifier_rf(X_train, y_train, X_test, y_test, max_depth, max_features,
     recall_smooth = recall_score(y_test, y_pred_smooth)
     disp2 = ConfusionMatrixDisplay(confusion_matrix(y_test, y_pred_smooth), display_labels=['sidewalk', 'street'])
     disp2.plot()
+    plt.show()
     with open("sidewalk-vs-street/imu_classifier_results/random_forest_final_{}.txt".format(date_time), mode='w') as rf_file:
         rf_file.write("Random Forest, settings: \n max depth {} max features {} num trees {} \n".format(max_depth, max_features, n_estimators))
         rf_file.write("F1 score normal {} F1 score smoothed {} \n".format(f1, f1_smooth))
@@ -249,7 +256,7 @@ def run_classifier_rf(X_train, y_train, X_test, y_test, max_depth, max_features,
     print("precision {} smoothed precision {}".format(prec, prec_smooth))
     print("recall {} recall smooth {}".format(recall, recall_smooth))
     print("done!")
-    #plt.close()
+    plt.close()
     return y_pred, y_pred_smooth
 
 
@@ -292,8 +299,8 @@ if __name__ == '__main__':
     
     #train, test = shuffle_and_split(all_samples, test_size=0.20, shuffle=True)
     #load train and test files:
-    train = pd.read_csv("IMU_Streams/train_samples_{}.csv".format(mode))
-    test = pd.read_csv("IMU_Streams/test_samples_{}.csv".format(mode))
+    train = pd.read_csv("IMU_Streams/train_samples_{}_shuffled.csv".format(mode))
+    test = pd.read_csv("IMU_Streams/test_samples_{}_shuffled.csv".format(mode))
     #print('loaded data from csv')
     
     print("number of training/val samples: ", train.shape[0])
@@ -311,7 +318,9 @@ if __name__ == '__main__':
     #all_data = pd.concat((X_train, X_test), axis=0)
     #all_data_y = pd.concat
     #((y_train, y_test), axis=0)
-    run_all_model_cross_val_stats(X_train, y_train, max_depth=max_depth, max_features=max_features, n_estimators=n_estimators)
+    cross_val_x = np.vstack((X_train, X_test))
+    cross_val_y = np.concatenate((y_train, y_test), axis=0)
+    run_all_model_cross_val_stats(cross_val_x, cross_val_y, max_depth=max_depth, max_features=max_features, n_estimators=n_estimators)
     #val_score, train_score, full_results = run_random_forest(X_train, y_train, n_estimators=n_estimators, max_depth=max_depth, max_features=max_features)
     '''
     print("random forest cross validation")
