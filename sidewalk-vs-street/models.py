@@ -32,7 +32,7 @@ def run_all_model_cross_val_stats(X, y, max_depth=None, max_features='auto', n_e
     print("svc kernel: ", kernel)
     res_file =  open("sidewalk-vs-street/imu_classifier_results/street_classifier_{}.txt".format(date_time), mode='w')
     results = dict()
-    
+    '''
     val_score, train_score, scores = run_logistic_regression(X, y)
     res_file.write("Logistic Regression Classifier CV: val_score: {}, train_scores: {} \n".format(val_score, train_score))
     results['Logistic Regression Classifier CV:'] = scores
@@ -45,19 +45,19 @@ def run_all_model_cross_val_stats(X, y, max_depth=None, max_features='auto', n_e
     print(svc_res)
     results['SVC Classifier with rbf kernel CV:'] = svc_res
     print('.....')
-
+    '''
     val_score, train_score, knn_res = run_knn(X, y)
     res_file.write("KNN Classifier CV: val_score: {}, train_scores: {} \n".format(val_score, train_score) )
     print(knn_res)
     results['KNN Classifier CV:'] = knn_res
     print('.....')
-
+    '''
     val_score, train_score, gnb_res = run_gaussian_naive_bayes(X, y)
     res_file.write("Gaussian Naive Bayes Classifier CV: val_score: {}, train_scores: {} \n".format(val_score, train_score) )
     print(gnb_res)
     results['Gaussian Naive Bayes Classifier CV:'] = gnb_res
     print('.....')
-
+    '''
     val_score, train_score, gbc_res = run_gradient_boosted(X, y, n_estimators=n_estimators)
     res_file.write("Gradient Boosting Classifier CV: val_score: {}, train_scores: {} \n".format(val_score, train_score) )
     print(gbc_res)
@@ -229,7 +229,7 @@ def run_classifier_rf(X_train, y_train, X_test, y_test, max_depth, max_features,
     prec = precision_score(y_test, y_pred)
     recall = recall_score(y_test, y_pred)
     #output smoothing (by most common of last 5 outputs)
-    plt.close()
+    #plt.close()
     y_pred_smooth = np.zeros_like(y_pred)
     for i in range(SMOOTH_STEP, len(y_pred), SMOOTH_STEP):
         slice = y_pred[i-SMOOTH_STEP:i]
@@ -249,7 +249,7 @@ def run_classifier_rf(X_train, y_train, X_test, y_test, max_depth, max_features,
     print("precision {} smoothed precision {}".format(prec, prec_smooth))
     print("recall {} recall smooth {}".format(recall, recall_smooth))
     print("done!")
-    plt.close()
+    #plt.close()
     return y_pred, y_pred_smooth
 
 
@@ -273,7 +273,7 @@ def run_lgbm(X_train, y_train, X_test, Y_test):
 if __name__ == '__main__':
      #HYPERPARAMETERS
     mode='running_window'
-    test_size = 0.80
+    test_size = 0.20
     shuffle = True
     WINDOW_SIZE = 75
     kernel = 'rbf'
@@ -281,45 +281,47 @@ if __name__ == '__main__':
     max_features = 'auto'
     max_depth = None
     SMOOTH_STEP = 5
-    #train, test = read_all_stream_files_in_dir('IMU_Streams', window_size=WINDOW_SIZE, mode=mode)
-    #print("dataset generated")
+    
+
 
     
 
-    #print('saved to csv')
     train, test = read_all_stream_files_in_dir("IMU_Streams", test_size=test_size, shuffle=shuffle, window_size=WINDOW_SIZE, mode=mode)
-    train.to_csv("IMU_Streams/train_samples_{}_shuffled_80.csv".format(mode))
-    test.to_csv("IMU_Streams/test_samples_{}_shuffled_80.csv".format(mode))
+    train.to_csv("IMU_Streams/train_samples_{}_shuffled.csv".format(mode))
+    test.to_csv("IMU_Streams/test_samples_{}_shuffled.csv".format(mode))
     
     #train, test = shuffle_and_split(all_samples, test_size=0.20, shuffle=True)
     #load train and test files:
-    train = pd.read_csv("IMU_Streams/train_samples_{}_shuffled_80.csv".format(mode))
-    test = pd.read_csv("IMU_Streams/test_samples_{}_shuffled_80.csv".format(mode))
-    print('loaded data from csv')
+    train = pd.read_csv("IMU_Streams/train_samples_{}.csv".format(mode))
+    test = pd.read_csv("IMU_Streams/test_samples_{}.csv".format(mode))
+    #print('loaded data from csv')
     
     print("number of training/val samples: ", train.shape[0])
     print("number of test samples: ", test.shape[0])
     
-    X_train = train.iloc[:, :-2]
+    X_train = train.iloc[:,1:-2].to_numpy()
     sublabels = train.iloc[:,-2]
-    y_train = train.iloc[:, -1]
-    X_test = test.iloc[:,:-2]
+    y_train = train.iloc[:, -1].to_numpy()
+    X_test = test.iloc[:,1:-2].to_numpy()
     sublabels_test = test.iloc[:,-2]
-    y_test = test.iloc[:, -1]
+    y_test = test.iloc[:, -1].to_numpy()
     print('number of sublabels in train and test: {} {}'.format(len(sublabels), len(sublabels_test)))
     #parameter_tuning_rf(X_train, y_train, X_test, y_test)
     #run_lgbm(X_train, y_train, X_test, y_test)
     #all_data = pd.concat((X_train, X_test), axis=0)
     #all_data_y = pd.concat
     #((y_train, y_test), axis=0)
-    #run_all_model_cross_val_stats(X_train, y_train, max_depth=max_depth, max_features=max_features, n_estimators=n_estimators)
+    run_all_model_cross_val_stats(X_train, y_train, max_depth=max_depth, max_features=max_features, n_estimators=n_estimators)
     #val_score, train_score, full_results = run_random_forest(X_train, y_train, n_estimators=n_estimators, max_depth=max_depth, max_features=max_features)
-    #print("random forest")
-    #print("val score: ", val_score)
-    #print("train score ", train_score)
-    #print("full scores: ", full_results)
+    '''
+    print("random forest cross validation")
+    print("val score: ", val_score)
+    print("train score ", train_score)
+    print("full scores: ", full_results)'''
+    
     y_pred, y_pred_smooth = run_classifier_rf(X_train, y_train, X_test, y_test, max_depth=max_depth, 
     max_features=max_features, n_estimators=n_estimators, SMOOTH_STEP=SMOOTH_STEP)
+    '''
     print(len(y_test))
     print(len(y_pred))
     y_pred = np.array(y_pred).reshape(-1,1)
@@ -331,7 +333,7 @@ if __name__ == '__main__':
     plt.close()
     compare_by_sublabel(y_pred_smooth, y_test, sublabels_test, title='sublabel_comparison_rf_run_win_smoothed')
     
-    '''
+    
     step_tests = np.array([3, 5, 8, 10])
     print("starting experiments")
     for step in step_tests:
