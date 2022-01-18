@@ -34,7 +34,7 @@ def run_all_model_cross_val_stats(X, y, max_depth=None, max_features='auto', n_e
     print(len(y))
     res_file =  open("sidewalk-vs-street/imu_classifier_results/street_classifier_{}.txt".format(date_time), mode='w')
     results = dict()
-    '''
+    
     val_score, train_score, scores = run_logistic_regression(X, y)
     res_file.write("Logistic Regression Classifier CV: val_score: {}, train_scores: {} \n".format(val_score, train_score))
     results['Logistic Regression Classifier CV:'] = scores
@@ -71,6 +71,7 @@ def run_all_model_cross_val_stats(X, y, max_depth=None, max_features='auto', n_e
     print(rfc_res)
     results['Random Forest Classifier CV:'] = rfc_res
     print('.....')
+    '''
 
     res_file.close()    
 
@@ -117,11 +118,13 @@ def run_gradient_boosted(X, y, n_estimators=100):
     return val_score, train_scores, gbc_res
 
 def run_random_forest(X, y, n_estimators, max_depth, max_features):
+    print('starting random forest CV')
     rfc_clf = RandomForestClassifier(max_depth=max_depth, max_features=max_features, n_estimators=n_estimators)
     print('Random Forest Classifier CV:')
     rfc_res = cross_validate(rfc_clf, X, y, cv=5, return_train_score=True)
     val_score = rfc_res['test_score'].mean()
     train_score = rfc_res['train_score'].mean()
+    print('finished random forest CV')
     return val_score, train_score, rfc_res
 
 def parameter_tuning_rf(X_train, y_train, X_test, y_test):
@@ -227,7 +230,11 @@ def run_classifier_rf(X_train, y_train, X_test, y_test, max_depth, max_features,
     date_time = now.strftime("%Y_%m_%d_%H_%M_%S")
     rfc_clf = RandomForestClassifier()
     rfc_clf.fit(X_train, y_train)
+    start = time.time()
     y_pred = rfc_clf.predict(X_test)
+    inference_time = time.time() - start
+    features = rfc_clf.feature_importances_
+    #dummy_test(rfc_clf, X_test[:5], y_test[:5])
     disp1 = ConfusionMatrixDisplay(confusion_matrix(y_test, y_pred), display_labels=['sidewalk', 'street'])
     disp1.plot()
     f1 = f1_score(y_test, y_pred)
@@ -251,14 +258,27 @@ def run_classifier_rf(X_train, y_train, X_test, y_test, max_depth, max_features,
         rf_file.write("F1 score normal {} F1 score smoothed {} \n".format(f1, f1_smooth))
         rf_file.write("precision: {} smoothed precision: {}\n".format(prec, prec_smooth))
         rf_file.write("recall {}, recall smoothed {} \n".format(recall, recall_smooth))
+        rf_file.write("inference time: {}".format(inference_time))
+        rf_file.write(str(features))
     print('Random Forest Classifier Results: ')
     print("F1 score {}, smoothed F1 score {}".format(f1, f1_smooth))
     print("precision {} smoothed precision {}".format(prec, prec_smooth))
     print("recall {} recall smooth {}".format(recall, recall_smooth))
     print("done!")
     plt.close()
-    return y_pred, y_pred_smooth
+    return y_pred, y_pred_smooth, features, rfc_clf
 
+def dummy_test(clf, X, y):
+    print("in dummy test")
+    print(X)
+    print(y)
+    for idx, x in enumerate(X):
+        x = x.reshape(1,-1)
+        y_pred = clf.predict(x)
+        if y_pred == y[idx]:
+            print("correct! predicted {} actual {}".format( y_pred, y[idx]))
+        else:
+            print("wrong! predicted {} actual {}".format( y_pred, y[idx]))
 
 def run_lgbm(X_train, y_train, X_test, Y_test):
     print('light gradient boosted machine')
@@ -276,8 +296,10 @@ def run_lgbm(X_train, y_train, X_test, Y_test):
     print("done, results written to file")
     
     
-
 if __name__ == '__main__':
+    import time
+    from joblib import dump, load
+    import pickle
      #HYPERPARAMETERS
     mode='running_window'
     test_size = 0.20
@@ -289,13 +311,9 @@ if __name__ == '__main__':
     max_depth = None
     SMOOTH_STEP = 5
     
-
-
-    
-
-    train, test = read_all_stream_files_in_dir("IMU_Streams", test_size=test_size, shuffle=shuffle, window_size=WINDOW_SIZE, mode=mode)
-    train.to_csv("IMU_Streams/train_samples_{}_shuffled.csv".format(mode))
-    test.to_csv("IMU_Streams/test_samples_{}_shuffled.csv".format(mode))
+    #train, test = read_all_stream_files_in_dir("IMU_Streams", test_size=test_size, shuffle=shuffle, window_size=WINDOW_SIZE, mode=mode)
+    #train.to_csv("IMU_Streams/train_samples_{}_shuffled.csv".format(mode))
+    #test.to_csv("IMU_Streams/test_samples_{}_shuffled.csv".format(mode))
     
     #train, test = shuffle_and_split(all_samples, test_size=0.20, shuffle=True)
     #load train and test files:
@@ -320,17 +338,28 @@ if __name__ == '__main__':
     #((y_train, y_test), axis=0)
     cross_val_x = np.vstack((X_train, X_test))
     cross_val_y = np.concatenate((y_train, y_test), axis=0)
-    run_all_model_cross_val_stats(cross_val_x, cross_val_y, max_depth=max_depth, max_features=max_features, n_estimators=n_estimators)
-    #val_score, train_score, full_results = run_random_forest(X_train, y_train, n_estimators=n_estimators, max_depth=max_depth, max_features=max_features)
-    '''
+    #
+    # 
+    #run_all_model_cross_val_stats(cross_val_x, cross_val_y, max_depth=max_depth, max_features=max_features, n_estimators=n_estimators)
+    val_score, train_score, full_results = run_random_forest(X_train, y_train, n_estimators=n_estimators, max_depth=max_depth, max_features=max_features)
+    
+    
     print("random forest cross validation")
     print("val score: ", val_score)
     print("train score ", train_score)
-    print("full scores: ", full_results)'''
-    
-    y_pred, y_pred_smooth = run_classifier_rf(X_train, y_train, X_test, y_test, max_depth=max_depth, 
-    max_features=max_features, n_estimators=n_estimators, SMOOTH_STEP=SMOOTH_STEP)
+    print("full scores: ", full_results)
     '''
+    y_pred, y_pred_smooth, features, clf = run_classifier_rf(X_train, y_train, X_test, y_test, max_depth=max_depth, 
+    max_features=max_features, n_estimators=n_estimators, SMOOTH_STEP=SMOOTH_STEP)
+    print(train.columns)
+    print(features)
+    filename = 'trained_rf.sav'
+    dump(clf, 'trained_rf_joblib.sav')
+    pickle.dump(clf, open(filename, 'wb'))
+    print("model saved")
+    feats = pd.DataFrame(features, columns=train.columns)
+    feats.to_csv("feature_importance.csv")
+    
     print(len(y_test))
     print(len(y_pred))
     y_pred = np.array(y_pred).reshape(-1,1)
@@ -351,4 +380,5 @@ if __name__ == '__main__':
         y_pred, y_pred_smooth = run_classifier_rf(X_train, y_train, X_test, y_test, max_depth, max_features, n_estimators, step)
         compare_by_sublabel(y_pred, y_test, sublabels_test, title=title)
         compare_by_sublabel(y_pred_smooth, y_test, sublabels_test, title=title+"smooth_level_{}".format(step))
+    
     print("done! ")'''

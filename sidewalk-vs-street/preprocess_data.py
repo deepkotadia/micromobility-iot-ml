@@ -1,3 +1,4 @@
+from cProfile import run
 from os import listdir
 from os.path import isfile, join
 import numpy as np
@@ -48,7 +49,7 @@ def normalize(df, mean, std):
     return normalized_df
 
 
-def read_all_stream_files_in_dir(dir_path, test_size=0.15, window_size=150, mode='fixed', shuffle=True):
+def read_all_stream_files_in_dir(dir_path, test_size=0.15, window_size=150, mode='running_window', shuffle=True):
     print("parameters for data preprocessing: ")
     print("mode: ", mode)
     print("Shuffle: ", shuffle)
@@ -72,30 +73,39 @@ def read_all_stream_files_in_dir(dir_path, test_size=0.15, window_size=150, mode
     df_street3 = pd.DataFrame()
 
     for filename in filenames:
-        data_stream, num_rows = read_imu_stream_file(f'{dir_path}/{filename}')
+        data_df, num_rows = read_imu_stream_file(f'{dir_path}/{filename}')
+        if mode == 'running_window':
+            data_stream = running_window(data_df, window_size=window_size)
+        elif mode == 'fixed':
+            data_stream = samples_and_feature_extraction(data_df, window_size=window_size)
 
-        # append to corresponding df
+        # append to corresponding df and label
         if 'sidewalk1' in filename:
+            data_stream['label'] = 0
             if df_sidewalk1.empty:
                 df_sidewalk1 = data_stream
             else: 
                 df_sidewalk1 = df_sidewalk1.append(data_stream, ignore_index=True)
         elif 'sidewalk' in filename:
+            data_stream['label'] = 0
             if df_sidewalk.empty:
                 df_sidewalk = data_stream
             else:
                 df_sidewalk = df_sidewalk.append(data_stream, ignore_index=True)
         elif 'street1' in filename or 'st1' in filename:
+            data_stream['label'] = 1
             if df_street1.empty:
                 df_street1 = data_stream
             else:
                 df_street1 = df_street1.append(data_stream, ignore_index=True)
         elif 'street2' in filename or 'st2' in filename:
+            data_stream['label'] = 1
             if df_street2.empty:
                 df_street2 = data_stream
             else:
                 df_street2 = df_street2.append(data_stream, ignore_index=True)
         elif 'street3' in filename or 'st3' in filename:
+            data_stream['label'] = 1
             if df_street3.empty:
                 df_street3 = data_stream
             else:
@@ -112,55 +122,24 @@ def read_all_stream_files_in_dir(dir_path, test_size=0.15, window_size=150, mode
     normalized_street3 = normalize(df_street3, mean, std)
     print("done normalizing")
 
-    # extract features
-    
-    if mode == 'running_window':
-        sidewalk1_samples = running_window(normalized_sidewalk1, window_size=window_size)
-        sidewalk_samples = running_window(normalized_sidewalk, window_size=window_size)
-        street1_samples = running_window(normalized_street1, window_size=window_size)
-        street2_samples = running_window(normalized_street2, window_size=window_size)
-        street3_samples = running_window(normalized_street3, window_size=window_size)
-    elif mode ==  'fixed':
-        sidewalk1_samples = samples_and_feature_extraction(normalized_sidewalk1, window_size=window_size)
-        sidewalk_samples = samples_and_feature_extraction(normalized_sidewalk, window_size=window_size)
-        street1_samples = samples_and_feature_extraction(normalized_street1, window_size=window_size)
-        street2_samples = samples_and_feature_extraction(normalized_street2, window_size=window_size)
-        street3_samples = samples_and_feature_extraction(normalized_street3, window_size=window_size)
-
     # add secondary labels
-    sidewalk1_samples['sublabel'] = 'sidewalk1'
-    sidewalk_samples['sublabel'] = 'sidewalk'
-    street1_samples['sublabel'] = 'street1'
-    street2_samples['sublabel'] = 'street2'
-    street3_samples['sublabel'] = 'street3'
+    normalized_sidewalk['sublabel'] = 'sidewalk'
+    normalized_sidewalk1['sublabel'] = 'sidewalk1'
+    normalized_street1['sublabel'] = 'street1'
+    normalized_street2['sublabel'] = 'street2'
+    normalized_street3['sublabel'] = 'street3'
 
-    # combine different sidewalk and street dfs respectively
-    all_sidewalk_samples = pd.concat((sidewalk1_samples, sidewalk_samples), axis=0, ignore_index=True)
-    all_street_samples = pd.concat((street1_samples, street2_samples, street3_samples), axis=0, ignore_index=True)
-
-    #add primary labels
-    all_sidewalk_samples['label'] = 0
-    all_street_samples['label'] = 1
-
+    #combine all sidewalk and street samples respectively
+    all_sidewalk_samples = pd.concat((normalized_sidewalk, normalized_sidewalk1))
+    all_street_samples = pd.concat((normalized_street1, normalized_street2, normalized_street3))
+    
     print("number of sidewalk samples: ", len(all_sidewalk_samples))
     print("number of street samples: ", len(all_street_samples))
-
-    all_samples = pd.concat((all_sidewalk_samples, all_street_samples), axis=0, ignore_index=True)
-    train, test = shuffle_and_split(all_samples, test_size=test_size, shuffle=True)
-    '''
-    #shuffle sidewalk and street internally only
-    sidewalk_train, sidewalk_test = shuffle_and_split(all_sidewalk_samples, test_size=test_size, shuffle=True)
-    street_train, street_test = shuffle_and_split(all_street_samples, test_size=test_size, shuffle=True)
     
-    #combine
-    train = pd.concat((sidewalk_train, street_train), axis=0, ignore_index=True)
-    test = pd.concat((sidewalk_test, street_test), axis=0, ignore_index=True)
-    '''
+    #combine all samples and train-test split
+    all_samples = pd.concat((all_sidewalk_samples, all_street_samples), axis=0, ignore_index=True)
+    train, test = shuffle_and_split(all_samples, test_size=test_size, shuffle=shuffle)
 
-
-
-    #combine:
-    #all_samples = pd.concat((all_sidewalk_samples, all_street_samples), axis=0, ignore_index=True)
     return train, test
 
 
@@ -221,6 +200,6 @@ def running_window(dataframe, window_size=75):
 
 
 if __name__ == '__main__':
-    train, test = read_all_stream_files_in_dir('IMU_Streams')
+    train, test = read_all_stream_files_in_dir('IMU_Streams', test_size=0.15, window_size=5, mode='running_window', shuffle=True)
     #train_df, test_df = shuffle_and_split(full_quantized_df, test_size=0.2)
     print('Done!')
