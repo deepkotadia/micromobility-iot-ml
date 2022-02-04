@@ -8,7 +8,7 @@ from scipy.sparse import data
 from sklearn.model_selection import train_test_split
 from scipy.signal import savgol_filter, find_peaks
 from sklearn.utils import shuffle
-
+import random
 
 
 COL_NAMES =['time',
@@ -18,7 +18,7 @@ COL_NAMES =['time',
 
 
 def read_imu_stream_file(filepath):
-    df = pd.read_csv(filepath_or_buffer=filepath, names=COL_NAMES)
+    df = pd.read_csv(filepath_or_buffer=filepath, names=COL_NAMES, dtype=float)
     full_data_stream = df[['accl_x', 'accl_y', 'accl_z', 'gyro_x', 'gyro_y', 'gyro_z']]
     # gyro_df = df[['gyro_x', 'gyro_y', 'gyro_z']]
     # mag_df = df[['mag_x', 'mag_y', 'mag_z']]
@@ -45,11 +45,12 @@ def normalize(df, mean, std):
     """
     z normalization (mean 0, std 1)
     """
-    normalized_df = (df - mean) / std
+    numerator = (df-mean)
+    normalized_df = numerator / std
     return normalized_df
 
 
-def read_all_stream_files_in_dir(dir_path, test_size=0.15, window_size=150, mode='running_window', shuffle=True):
+def read_all_stream_files_in_dir(dir_path, test_size=0.15, window_size=150, mode='fixed', shuffle=True):
     print("parameters for data preprocessing: ")
     print("mode: ", mode)
     print("Shuffle: ", shuffle)
@@ -64,81 +65,135 @@ def read_all_stream_files_in_dir(dir_path, test_size=0.15, window_size=150, mode
     for i in range(window_size):
         col_names.extend([f'accl_x_{i}', f'accl_y_{i}', f'accl_z_{i}'])
 
-
+    constants  = pd.read_csv('normalizing_constants.csv', index_col=False)
+    mean = constants.loc[0].to_numpy()
+    std = constants.loc[1].to_numpy()
     # Different types of streets and sidewalks (for secondary labels)
     df_sidewalk1 = pd.DataFrame()
     df_sidewalk = pd.DataFrame()
     df_street1 = pd.DataFrame()
     df_street2 = pd.DataFrame()
     df_street3 = pd.DataFrame()
-
+    train = pd.DataFrame()
+    test = pd.DataFrame()
+    train_files = open('train_files.txt', 'w')
+    test_files = open('test_files.txt', 'w')
     for filename in filenames:
         data_df, num_rows = read_imu_stream_file(f'{dir_path}/{filename}')
+        #print('data types:',  data_df.dtypes)
+        #cols = data_df.columns
+        #data_df[cols] = data_df[cols].apply(pd.to_numeric)
+        #print("dtypes after convert: ", data_df.dtypes)
         if mode == 'running_window':
+            data_df = pd.DataFrame(filter_data(data_df))
             data_stream = running_window(data_df, window_size=window_size)
         elif mode == 'fixed':
             data_stream = samples_and_feature_extraction(data_df, window_size=window_size)
+        indicator = random.random()
 
         # append to corresponding df and label
         if 'sidewalk1' in filename:
-            data_stream['label'] = 0
+            
+            data_stream['label'] = 1
+            data_stream['sublabel'] = 'sidewalk1'
             if df_sidewalk1.empty:
                 df_sidewalk1 = data_stream
             else: 
                 df_sidewalk1 = df_sidewalk1.append(data_stream, ignore_index=True)
+            if indicator < 0.8:
+                train = train.append(data_stream)
+                train_files.write(filename + '\n')
+            else:
+                test = test.append(data_stream)
+                test_files.write(filename + '\n')
         elif 'sidewalk' in filename:
-            data_stream['label'] = 0
+            indicator = random.random()
+            data_stream['label'] = 1
+            data_stream['sublabel'] = 'sidewalk'
             if df_sidewalk.empty:
                 df_sidewalk = data_stream
             else:
                 df_sidewalk = df_sidewalk.append(data_stream, ignore_index=True)
+            if indicator < 0.8:
+                train = train.append(data_stream)
+                train_files.write(filename + '\n')
+            else:
+                test = test.append(data_stream)
+                test_files.write(filename + '\n')
         elif 'street1' in filename or 'st1' in filename:
-            data_stream['label'] = 1
+            
+            data_stream['label'] = 0
+            data_stream['sublabel'] = 'street1'
             if df_street1.empty:
                 df_street1 = data_stream
             else:
                 df_street1 = df_street1.append(data_stream, ignore_index=True)
+            if indicator < 0.8:
+                train = train.append(data_stream)
+                train_files.write(filename + '\n')
+            else:
+                test = test.append(data_stream)
+                test_files.write(filename + '\n')
         elif 'street2' in filename or 'st2' in filename:
-            data_stream['label'] = 1
+            
+            data_stream['label'] = 0
+            data_stream['sublabel'] = 'street2'
             if df_street2.empty:
                 df_street2 = data_stream
             else:
                 df_street2 = df_street2.append(data_stream, ignore_index=True)
+            if indicator < 0.8:
+                train = train.append(data_stream)
+                train_files.write(filename + '\n')
+            else:
+                test = test.append(data_stream)
+                test_files.write(filename + '\n')
         elif 'street3' in filename or 'st3' in filename:
-            data_stream['label'] = 1
+            
+            data_stream['label'] = 0
+            data_stream['sublabel'] = 'street3'
             if df_street3.empty:
                 df_street3 = data_stream
             else:
                 df_street3 = df_street3.append(data_stream, ignore_index=True)
+            if indicator < 0.8:
+                train = train.append(data_stream)
+                train_files.write(filename + '\n')
+            else:
+                test = test.append(data_stream)
+                train_files.write(filename + '\n')
 
-    # normalize all dfs
-    full_df = pd.concat((df_sidewalk1, df_sidewalk, df_street1, df_street2, df_street3), axis=0, ignore_index=True)
-    mean = full_df.mean(skipna=True)
-    std = full_df.std(skipna=True)
-    normalized_sidewalk1 = normalize(df_sidewalk1, mean, std)
-    normalized_sidewalk = normalize(df_sidewalk, mean, std)
-    normalized_street1 = normalize(df_street1, mean, std)
-    normalized_street2 = normalize(df_street2, mean, std)
-    normalized_street3 = normalize(df_street3, mean, std)
-    print("done normalizing")
-
-    # add secondary labels
-    normalized_sidewalk['sublabel'] = 'sidewalk'
-    normalized_sidewalk1['sublabel'] = 'sidewalk1'
-    normalized_street1['sublabel'] = 'street1'
-    normalized_street2['sublabel'] = 'street2'
-    normalized_street3['sublabel'] = 'street3'
-
-    #combine all sidewalk and street samples respectively
-    all_sidewalk_samples = pd.concat((normalized_sidewalk, normalized_sidewalk1))
-    all_street_samples = pd.concat((normalized_street1, normalized_street2, normalized_street3))
+    if shuffle:
+        train = train.sample(frac=1).reset_index(drop=True)
+        test = test.sample(frac=1).reset_index(drop=True)
+    train_labels = train['label']
+    test_labels = test['label']
+    train_sublabels = train['sublabel']
+    test_sublabels = test['sublabel']
     
-    print("number of sidewalk samples: ", len(all_sidewalk_samples))
-    print("number of street samples: ", len(all_street_samples))
+    train = train.drop(columns=['label', 'sublabel'])
+    test = test.drop(columns=['label', 'sublabel'])
+    train = normalize(train, mean, std)
+    test = normalize(test, mean, std)
+    train['label'] = train_labels
+    test['label'] = test_labels
+    train['sublabel'] = train_sublabels
+    test['sublabel'] = test_sublabels
+    print('sublabels present in train: ', train['sublabel'].unique())
+    print('sublabels in test: ', test['sublabel'].unique())
+    '''
+
+    #try train and test on entirely different sidewalk/street:
     
-    #combine all samples and train-test split
-    all_samples = pd.concat((all_sidewalk_samples, all_street_samples), axis=0, ignore_index=True)
-    train, test = shuffle_and_split(all_samples, test_size=test_size, shuffle=shuffle)
+    train = pd.concat((normalized_sidewalk, normalized_street1, normalized_street2))
+    test = pd.concat((normalized_sidewalk1, normalized_street3))
+    if shuffle:
+        train.sample(frac=1).reset_index(drop=True)
+        test.sample(frac=1).reset_index(drop=True)
+    print('sublabels in train', pd.unique(train['sublabel']))
+    print('sublabels in test: ', pd.unique(test['sublabel']))'''
+    
+    print(f"number of samples: train: {train.shape[0]} test: {test.shape[0]}")
 
     return train, test
 
@@ -198,8 +253,12 @@ def running_window(dataframe, window_size=75):
     all_samples = all_samples.iloc[window_size:,:]
     return all_samples
 
+def filter_data(data):
+    filtered = savgol_filter(data, window_length=75, polyorder=3, axis=0)
+    return filtered
+
 
 if __name__ == '__main__':
-    train, test = read_all_stream_files_in_dir('IMU_Streams', test_size=0.15, window_size=5, mode='running_window', shuffle=True)
+    train, test = read_all_stream_files_in_dir('IMU_Streams', test_size=0.15, window_size=75, mode='fixed', shuffle=True)
     #train_df, test_df = shuffle_and_split(full_quantized_df, test_size=0.2)
     print('Done!')
