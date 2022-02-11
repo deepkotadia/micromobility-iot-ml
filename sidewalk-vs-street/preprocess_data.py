@@ -95,8 +95,8 @@ def read_all_stream_files_in_dir(dir_path, test_size=0.15, time_window=10, mode=
         #data_df[cols] = data_df[cols].apply(pd.to_numeric)
         #print("dtypes after convert: ", data_df.dtypes)
         data_df[['gyro_x', 'gyro_y', 'gyro_z']] = data_df[['gyro_x', 'gyro_y', 'gyro_z']].fillna(value=data_df[['gyro_x', 'gyro_y', 'gyro_z']].mean())
-        data_df = pd.DataFrame(filter_data(data_df), columns=['accl_x', 'accl_y', 'accl_z', 'gyro_x', 'gyro_y', 'gyro_z'])
-        #data_df = pd.DataFrame(low_pass_filter(data_df, beta=1, alpha=0.96), columns=['accl_x', 'accl_y', 'accl_z', 'gyro_x', 'gyro_y', 'gyro_z'])
+        #data_df = pd.DataFrame(filter_data(data_df), columns=['accl_x', 'accl_y', 'accl_z', 'gyro_x', 'gyro_y', 'gyro_z'])
+        data_df = pd.DataFrame(low_pass_filter(data_df, beta=1, alpha=0.96), columns=['accl_x', 'accl_y', 'accl_z', 'gyro_x', 'gyro_y', 'gyro_z'])
         if mode == 'running_window':
             data_stream = running_window(data_df, time_window=time_window)
         elif mode == 'fixed':
