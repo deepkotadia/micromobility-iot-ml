@@ -32,7 +32,7 @@ def read_imu_stream_file(filepath):
     full_data_stream = df[['accl_x', 'accl_y', 'accl_z', 'gyro_x', 'gyro_y', 'gyro_z']]
     # gyro_df = df[['gyro_x', 'gyro_y', 'gyro_z']]
     # mag_df = df[['mag_x', 'mag_y', 'mag_z']]
-    full_data_stream = full_data_stream[150:-150]
+    #full_data_stream = full_data_stream[150:-150]
     return full_data_stream, full_data_stream.shape[0]
 
 
@@ -88,92 +88,96 @@ def read_all_stream_files_in_dir(dir_path, test_size=0.15, time_window=10, mode=
     test = pd.DataFrame()
     train_files = open('train_files.txt', 'w')
     test_files = open('test_files.txt', 'w')
+    criteria = 'none'
     for filename in filenames:
-        data_df, num_rows = read_imu_stream_file(f'{dir_path}/{filename}')
-        #print('data types:',  data_df.dtypes)
-        #cols = data_df.columns
-        #data_df[cols] = data_df[cols].apply(pd.to_numeric)
-        #print("dtypes after convert: ", data_df.dtypes)
-        data_df[['gyro_x', 'gyro_y', 'gyro_z']] = data_df[['gyro_x', 'gyro_y', 'gyro_z']].fillna(value=data_df[['gyro_x', 'gyro_y', 'gyro_z']].mean())
-        #data_df = pd.DataFrame(filter_data(data_df), columns=['accl_x', 'accl_y', 'accl_z', 'gyro_x', 'gyro_y', 'gyro_z'])
-        data_df = pd.DataFrame(low_pass_filter(data_df, beta=1, alpha=0.96), columns=['accl_x', 'accl_y', 'accl_z', 'gyro_x', 'gyro_y', 'gyro_z'])
-        if mode == 'running_window':
-            data_stream = running_window(data_df, time_window=time_window)
-        elif mode == 'fixed':
-            data_stream = samples_and_feature_extraction(data_df, time_window=time_window)
-        indicator = random.random()
-
-        # append to corresponding df and label
-        if 'sidewalk1' in filename:
-            
-            data_stream['label'] = 1
-            data_stream['sublabel'] = 'sidewalk1'
-            if df_sidewalk1.empty:
-                df_sidewalk1 = data_stream
-            else: 
-                df_sidewalk1 = df_sidewalk1.append(data_stream, ignore_index=True)
-            if indicator < 0.8:
-                train = train.append(data_stream)
-                train_files.write(filename + '\n')
-            else:
-                test = test.append(data_stream)
-                test_files.write(filename + '\n')
-        elif 'sidewalk' in filename:
+        if exclude_sample(filename, criteria):
+            pass
+        else:
+            data_df, num_rows = read_imu_stream_file(f'{dir_path}/{filename}')
+            #print('data types:',  data_df.dtypes)
+            #cols = data_df.columns
+            #data_df[cols] = data_df[cols].apply(pd.to_numeric)
+            #print("dtypes after convert: ", data_df.dtypes)
+            data_df.interpolate(method='linear', limit=2, limit_direction='both', axis=0, inplace=True)
+            #data_df = pd.DataFrame(filter_data(data_df), columns=['accl_x', 'accl_y', 'accl_z', 'gyro_x', 'gyro_y', 'gyro_z'])
+            data_df = pd.DataFrame(low_pass_filter(data_df, beta=1, alpha=0.96), columns=['accl_x', 'accl_y', 'accl_z', 'gyro_x', 'gyro_y', 'gyro_z'])
+            if mode == 'running_window':
+                data_stream = running_window(data_df, time_window=time_window)
+            elif mode == 'fixed':
+                data_stream = samples_and_feature_extraction(data_df, time_window=time_window)
             indicator = random.random()
-            data_stream['label'] = 1
-            data_stream['sublabel'] = 'sidewalk'
-            if df_sidewalk.empty:
-                df_sidewalk = data_stream
-            else:
-                df_sidewalk = df_sidewalk.append(data_stream, ignore_index=True)
-            if indicator < 0.8:
-                train = train.append(data_stream)
-                train_files.write(filename + '\n')
-            else:
-                test = test.append(data_stream)
-                test_files.write(filename + '\n')
-        elif 'street1' in filename or 'st1' in filename:
-            
-            data_stream['label'] = 0
-            data_stream['sublabel'] = 'street1'
-            if df_street1.empty:
-                df_street1 = data_stream
-            else:
-                df_street1 = df_street1.append(data_stream, ignore_index=True)
-            if indicator < 0.8:
-                train = train.append(data_stream)
-                train_files.write(filename + '\n')
-            else:
-                test = test.append(data_stream)
-                test_files.write(filename + '\n')
-        elif 'street2' in filename or 'st2' in filename:
-            
-            data_stream['label'] = 0
-            data_stream['sublabel'] = 'street2'
-            if df_street2.empty:
-                df_street2 = data_stream
-            else:
-                df_street2 = df_street2.append(data_stream, ignore_index=True)
-            if indicator < 0.8:
-                train = train.append(data_stream)
-                train_files.write(filename + '\n')
-            else:
-                test = test.append(data_stream)
-                test_files.write(filename + '\n')
-        elif 'street3' in filename or 'st3' in filename:
-            
-            data_stream['label'] = 0
-            data_stream['sublabel'] = 'street3'
-            if df_street3.empty:
-                df_street3 = data_stream
-            else:
-                df_street3 = df_street3.append(data_stream, ignore_index=True)
-            if indicator < 0.8:
-                train = train.append(data_stream)
-                train_files.write(filename + '\n')
-            else:
-                test = test.append(data_stream)
-                train_files.write(filename + '\n')
+
+            # append to corresponding df and label
+            if 'sidewalk1' in filename:
+                
+                data_stream['label'] = 1
+                data_stream['sublabel'] = 'sidewalk1'
+                if df_sidewalk1.empty:
+                    df_sidewalk1 = data_stream
+                else: 
+                    df_sidewalk1 = df_sidewalk1.append(data_stream, ignore_index=True)
+                if indicator < 0.8:
+                    train = train.append(data_stream)
+                    train_files.write(filename + '\n')
+                else:
+                    test = test.append(data_stream)
+                    test_files.write(filename + '\n')
+            elif 'sidewalk' in filename:
+                indicator = random.random()
+                data_stream['label'] = 1
+                data_stream['sublabel'] = 'sidewalk'
+                if df_sidewalk.empty:
+                    df_sidewalk = data_stream
+                else:
+                    df_sidewalk = df_sidewalk.append(data_stream, ignore_index=True)
+                if indicator < 0.8:
+                    train = train.append(data_stream)
+                    train_files.write(filename + '\n')
+                else:
+                    test = test.append(data_stream)
+                    test_files.write(filename + '\n')
+            elif 'street1' in filename or 'st1' in filename:
+                
+                data_stream['label'] = 0
+                data_stream['sublabel'] = 'street1'
+                if df_street1.empty:
+                    df_street1 = data_stream
+                else:
+                    df_street1 = df_street1.append(data_stream, ignore_index=True)
+                if indicator < 0.8:
+                    train = train.append(data_stream)
+                    train_files.write(filename + '\n')
+                else:
+                    test = test.append(data_stream)
+                    test_files.write(filename + '\n')
+            elif 'street2' in filename or 'st2' in filename:
+                
+                data_stream['label'] = 0
+                data_stream['sublabel'] = 'street2'
+                if df_street2.empty:
+                    df_street2 = data_stream
+                else:
+                    df_street2 = df_street2.append(data_stream, ignore_index=True)
+                if indicator < 0.8:
+                    train = train.append(data_stream)
+                    train_files.write(filename + '\n')
+                else:
+                    test = test.append(data_stream)
+                    test_files.write(filename + '\n')
+            elif 'street3' in filename or 'st3' in filename:
+                
+                data_stream['label'] = 0
+                data_stream['sublabel'] = 'street3'
+                if df_street3.empty:
+                    df_street3 = data_stream
+                else:
+                    df_street3 = df_street3.append(data_stream, ignore_index=True)
+                if indicator < 0.8:
+                    train = train.append(data_stream)
+                    train_files.write(filename + '\n')
+                else:
+                    test = test.append(data_stream)
+                    train_files.write(filename + '\n')
 
     full_df = pd.concat((df_sidewalk, df_sidewalk1, df_street1, df_street2, df_street3), axis=0)
     mean = full_df[FEATURE_COLS].mean(axis=0)
@@ -212,6 +216,13 @@ def read_all_stream_files_in_dir(dir_path, test_size=0.15, time_window=10, mode=
     print(f"number of samples: train: {train.shape[0]} test: {test.shape[0]}")
 
     return train, test
+
+def exclude_sample(filename, criteria):
+    if criteria in filename:
+        return True
+    else:
+        return False
+
 
 
 def shuffle_and_split(df, test_size=0.2, shuffle=True):
@@ -302,7 +313,7 @@ def peak_finder(signal):
 
 if __name__ == '__main__':
     time_window = 10
-    train, test = read_all_stream_files_in_dir('IMU_Streams', test_size=0.15, window_size=time_window, mode='running_window', shuffle=True)
+    train, test = read_all_stream_files_in_dir('IMU_Streams', test_size=0.15, time_window=time_window, mode='running_window', shuffle=True)
     #train_df, test_df = shuffle_and_split(full_quantized_df, test_size=0.2)
     train.to_csv("IMU_Streams/preprocessed/train_samples_nobrick_filtered_peaks.csv")
     test.to_csv("IMU_Streams/preprocessed/test_samples_nobrick_filtered_peaks.csv")

@@ -113,8 +113,37 @@ def dummytest():
     plt.plot(xf, 2.0/N * np.abs(yf[0:N//2]))
     plt.show()
 
+def speed(signal, window_size):
+    signal = signal*-1 #rotate axis
+    reset = np.sum(signal[:150])
+    dt = 1/50
+    num_samples = 50*window_size
+    idx = signal.shape[0] - (signal.shape[0] % num_samples)
+    #signal = signal[:idx]
+    segments = signal.shape[0]/num_samples
+    v0 = signal[0]
+    speeds = []
+    error_est = np.sum(signal[:25]*dt)
+    step = int((0.5*50))
+    for i in range(step, signal.shape[0], step):
+        v0 = np.sum(signal[(i-step-int(step/4)):(i-step)]*dt-error_est)
+        speeds.append(v0 + np.sum(signal[i-step:i]*dt)-error_est)
+
+
+    #segments = np.array(np.split(signal, segments))
+    #speed = np.sum(segments*dt, axis=1)
+    #speed = speed - reset
+    plt.plot(speeds)
+    plt.savefig(name+'speed.png')
+    #plt.show()
+    plt.close()
+
+
+
 if __name__ == "__main__":
     #dummytest()
+
+    
     savedir = 'plots_fft/filtered/lowpass'
     savedir_spectr = 'plots_fft/spectrogram/lowpass'
     if not isdir(savedir_spectr):
@@ -124,14 +153,20 @@ if __name__ == "__main__":
     files = [f'IMU_Streams/{f}' for f in listdir('IMU_Streams') if isfile(join('IMU_Streams', f))]
     print('plotting all signals')
     for file in files:
+        
         signal, _ = read_imu_stream_file(file)
+        
         name = splitext(split(file)[1])[0]
-        signal[['gyro_x', 'gyro_y', 'gyro_z']] = signal[['gyro_x', 'gyro_y', 'gyro_z']].fillna(value=signal[['gyro_x', 'gyro_y', 'gyro_z']].mean())
+        speed(signal['accl_z'].to_numpy(), window_size=3)
+        
+        signal.interpolate(method='linear', limit=2, limit_direction='both', axis=0, inplace=True)
         #signal = filter_all_axes(signal)
         signal = lowpass_filter(signal)
         spectrogram_viz(signal, name, savedir_spectr)
         fft_viz(signal, figtitle=name, savedir=savedir, timewindow=15)
+        
     print('done!')
     #signal = pd.read_csv('IMU_Streams/st1MedDNoweight1.csv', names=ALL_COL_NAMES)
 
     #viz_peaks(signal)
+    

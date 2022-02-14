@@ -196,8 +196,12 @@ def compare_by_sublabel(y_pred, y_test, sublabels, title, date_time):
     print("total correct: ", sum(correct_results.values()))
     print("total incorrect: ", sum(wrong_results.values()))
     fig, ax = plt.subplots(1, 2)
-    ax[0].bar(x=list(correct_results.keys()), height=list(correct_results.values()), color='g')
-    ax[1].bar(x=list(wrong_results.keys()), height=(wrong_results.values()), color='r')
+    wrong = np.array(list(wrong_results.values()))
+    correct = np.array(list(correct_results.values()))
+    fractions = correct/(wrong+correct)
+    portions = (correct+wrong)/len(y_pred)
+    ax[0].bar(x=list(correct_results.keys()), height=list(fractions), color='g')
+    ax[1].bar(x=list(wrong_results.keys()), height=list(portions), color='r')
     ax[0].set_ylabel("number of samples")
     ax[0].set_xlabel("sublabel identity")
     ax[1].set_ylabel("number of samples")
@@ -339,7 +343,7 @@ if __name__ == '__main__':
     max_features = 'sqrt'
     max_depth = 6
     SMOOTH_STEP = 10
-    load_from_file = False
+    load_from_file = True
     
    #test.to_csv("IMU_Streams/test_samples_{}_shuffled.csv".format(mode))
     
@@ -348,14 +352,14 @@ if __name__ == '__main__':
     now = datetime.now()
     date_time = now.strftime("%Y_%m_%d_%H_%M_%S")
     if load_from_file:
-        train = pd.read_csv("IMU_Streams/preprocessed/train_samples_nobrick_lo.csv")
-        test = pd.read_csv("IMU_Streams/preprocessed/test_samples_nobrick_lo.csv")
+        train = pd.read_csv("IMU_Streams/preprocessed/train_samples_nobrick_lowpass.csv")
+        test = pd.read_csv("IMU_Streams/preprocessed/test_samples_nobrick_lowpass.csv")
         print('loaded data from csv')
     else:
         print("preprocessing data")
         train, test = read_all_stream_files_in_dir("IMU_Streams", test_size=test_size, shuffle=shuffle, time_window=WINDOW_SIZE, mode=mode)
-        #train.to_csv("IMU_Streams/preprocessed/train_samples_nobrick_lo.csv")
-        #test.to_csv("IMU_Streams/preprocessed/test_samples_nobrick_lo.csv")
+        train.to_csv("IMU_Streams/preprocessed/train_samples_nobrick_lo.csv")
+        test.to_csv("IMU_Streams/preprocessed/test_samples_nobrick_lo.csv")
  
     train = train.sort_values(by=['sublabel']).reset_index(drop=True)
     test = test.sort_values(by=['sublabel']).reset_index(drop=True)
