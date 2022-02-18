@@ -7,7 +7,7 @@ import pandas as pd
 from scipy.sparse import data
 from sklearn import feature_selection
 from sklearn.model_selection import train_test_split
-from scipy.signal import savgol_filter, find_peaks, lfilter
+from scipy.signal import savgol_filter, find_peaks, lfilter, butter, sosfilt
 from sklearn.utils import shuffle
 import random
 
@@ -34,6 +34,13 @@ def read_imu_stream_file(filepath):
     # mag_df = df[['mag_x', 'mag_y', 'mag_z']]
     #full_data_stream = full_data_stream[150:-150]
     return full_data_stream, full_data_stream.shape[0]
+
+def define_filter():
+    return butter(1, Wn=0.02, btype='high', output='sos')
+
+def high_pass_filter(signal, sos_filter):
+    filtered = sosfilt(sos_filter, signal)
+    return filtered
 
 
 def quantize_and_clean(sensor_reading_triplets, num_triplets_per_window, col_labels, feature_label):
@@ -88,9 +95,13 @@ def read_all_stream_files_in_dir(dir_path, test_size=0.15, time_window=10, mode=
     test = pd.DataFrame()
     train_files = open('train_files.txt', 'w')
     test_files = open('test_files.txt', 'w')
-    criteria = 'none'
+    criteria = ['sidewalk', 'street2', 'st2', 'street3', 'st3', 'fast']
+    excluded_files = []
+    sos_filt = define_filter()
+    cols_to_filter = ['accl_x', 'accl_y', 'accl_z']
     for filename in filenames:
         if exclude_sample(filename, criteria):
+            excluded_files.append(filename)
             pass
         else:
             data_df, num_rows = read_imu_stream_file(f'{dir_path}/{filename}')
@@ -99,8 +110,13 @@ def read_all_stream_files_in_dir(dir_path, test_size=0.15, time_window=10, mode=
             #data_df[cols] = data_df[cols].apply(pd.to_numeric)
             #print("dtypes after convert: ", data_df.dtypes)
             data_df.interpolate(method='linear', limit=2, limit_direction='both', axis=0, inplace=True)
-            #data_df = pd.DataFrame(filter_data(data_df), columns=['accl_x', 'accl_y', 'accl_z', 'gyro_x', 'gyro_y', 'gyro_z'])
+            
             data_df = pd.DataFrame(low_pass_filter(data_df, beta=1, alpha=0.96), columns=['accl_x', 'accl_y', 'accl_z', 'gyro_x', 'gyro_y', 'gyro_z'])
+            for col in cols_to_filter:
+                data_df[col] = high_pass_filter(data_df[col], sos_filt) ##high pass filting out gravity
+
+            #data_df = pd.DataFrame(low_pass_filter(data_df, beta=1, alpha=0.96), columns=['accl_x', 'accl_y', 'accl_z', 'gyro_x', 'gyro_y', 'gyro_z'])
+
             if mode == 'running_window':
                 data_stream = running_window(data_df, time_window=time_window)
             elif mode == 'fixed':
@@ -109,7 +125,6 @@ def read_all_stream_files_in_dir(dir_path, test_size=0.15, time_window=10, mode=
 
             # append to corresponding df and label
             if 'sidewalk1' in filename:
-                
                 data_stream['label'] = 1
                 data_stream['sublabel'] = 'sidewalk1'
                 if df_sidewalk1.empty:
@@ -215,13 +230,15 @@ def read_all_stream_files_in_dir(dir_path, test_size=0.15, time_window=10, mode=
     
     print(f"number of samples: train: {train.shape[0]} test: {test.shape[0]}")
 
+    print("excluded files: ", excluded_files)
     return train, test
 
 def exclude_sample(filename, criteria):
-    if criteria in filename:
-        return True
-    else:
-        return False
+    for c in criteria:
+        if c in filename.lower():
+            return True
+    return False
+
 
 
 
@@ -313,6 +330,7 @@ def peak_finder(signal):
 
 if __name__ == '__main__':
     time_window = 10
+    read_imu_stream_file('IMU_Streams/sidewalk1MedDNoweight.csv')
     train, test = read_all_stream_files_in_dir('IMU_Streams', test_size=0.15, time_window=time_window, mode='running_window', shuffle=True)
     #train_df, test_df = shuffle_and_split(full_quantized_df, test_size=0.2)
     train.to_csv("IMU_Streams/preprocessed/train_samples_nobrick_filtered_peaks.csv")

@@ -343,7 +343,7 @@ if __name__ == '__main__':
     max_features = 'sqrt'
     max_depth = 6
     SMOOTH_STEP = 10
-    load_from_file = True
+    load_from_file = False
     
    #test.to_csv("IMU_Streams/test_samples_{}_shuffled.csv".format(mode))
     
@@ -358,8 +358,8 @@ if __name__ == '__main__':
     else:
         print("preprocessing data")
         train, test = read_all_stream_files_in_dir("IMU_Streams", test_size=test_size, shuffle=shuffle, time_window=WINDOW_SIZE, mode=mode)
-        train.to_csv("IMU_Streams/preprocessed/train_samples_nobrick_lo.csv")
-        test.to_csv("IMU_Streams/preprocessed/test_samples_nobrick_lo.csv")
+        train.to_csv("IMU_Streams/preprocessed/train_samples_nobrick_last.csv")
+        test.to_csv("IMU_Streams/preprocessed/test_samples_nobrick_last.csv")
  
     train = train.sort_values(by=['sublabel']).reset_index(drop=True)
     test = test.sort_values(by=['sublabel']).reset_index(drop=True)

@@ -1,9 +1,10 @@
+from cmath import cos, sin
 from matplotlib import markers
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import scipy
-from scipy.signal import savgol_filter, find_peaks, spectrogram, lfilter
+from scipy.signal import savgol_filter, find_peaks, spectrogram, lfilter, butter, sosfilt
 from scipy.fftpack import fft, fftfreq
 from os.path import *
 from os import listdir, mkdir
@@ -52,8 +53,14 @@ def lowpass_filter(signal):
     filtered_df = pd.DataFrame(lfilter(b=[1], a= [0.96], x=signal, axis=0), columns=FEATURE_COLS)
     return filtered_df
 
+def define_filter():
+    return butter(1, Wn=0.02, btype='high', output='sos')
 
-        
+def high_pass_filter(signal, sos_filter):
+    filtered = sosfilt(sos_filter, signal)
+    return filtered
+
+
 
 def fft_viz(signal, figtitle, savedir, timewindow=10):
     frequency = 50
@@ -113,21 +120,94 @@ def dummytest():
     plt.plot(xf, 2.0/N * np.abs(yf[0:N//2]))
     plt.show()
 
-def speed(signal, window_size):
-    signal = signal*-1 #rotate axis
-    reset = np.sum(signal[:150])
+def dummy_step_func():
+    step_func = np.array([-1 for i in range(200)] + [1 for i in range(200)])
+    step = 5
+    speeds = [0]
     dt = 1/50
-    num_samples = 50*window_size
-    idx = signal.shape[0] - (signal.shape[0] % num_samples)
-    #signal = signal[:idx]
-    segments = signal.shape[0]/num_samples
-    v0 = signal[0]
-    speeds = []
+    for i in range(step, len(step_func), step):
+
+        speeds.append(speeds[-1] + np.sum(step_func[i-step:i]*dt))
+    plt.subplot(1,2,1)
+    plt.plot(step_func)
+    plt.subplot(1,2,2)
+    plt.plot(speeds)
+    plt.show()
+'''float rotationMatrix[3][3] = 
+{
+  { cos(alpha)*cos(beta) , cos(alpha)*sin(beta)*sin(theta) - sin(alpha)*cos(theta) , cos(alpha)*sin(beta)*cos(theta) + sin(alpha)*sin(theta)},
+  { sin(alpha)*cos(beta) , sin(alpha)*sin(beta)*sin(theta) + cos(alpha)*cos(theta) , sin(alpha)*sin(beta)*cos(theta) - cos(alpha)*sin(theta)},
+  {     -1* sin(beta)    ,                  cos(beta) * sin(theta)                 ,               cos(beta) * cos(theta)                   }
+};'''
+def getRotationMatrix(gyro_est):
+    theta, beta, alpha = gyro_est[0], gyro_est[1], gyro_est[2]
+    rotationMatrix = np.array(
+        [[cos(alpha)*cos(beta), cos(alpha)*sin(beta)*sin(theta)-sin(alpha)*cos(theta), cos(alpha)*sin(beta)*cos(theta)+sin(alpha)*sin(theta)],
+        [sin(alpha)*cos(beta), sin(alpha)*sin(beta)*sin(theta)+cos(alpha)*cos(theta), sin(alpha)*sin(beta)*cos(theta) - cos(alpha)*sin(theta)],
+        [-1*sin(beta), cos(beta)*sin(theta), cos(beta)*cos(theta)]])
+    return rotationMatrix
+
+def rotate_acceleration(accl, rotationMatrix):
+    rotated = np.dot(accl, rotationMatrix)
+    print(rotated)
+    return rotated
+
+def estimate_gyro(gyro):
+    return NotImplemented
+
+def correct_for_gravity(accl_rotated):
+    gravity = np.array([0, 0, 1])
+    return accl_rotated - gravity
+
+def compute_speed(forward_accl):
+    dt =  1/50 #sampling rate
+    step = 25 #25 samples is 0.5 seconds
+    error_est = np.sum(forward_accl[:step]*dt)
+    speeds = [0]
+    for i in range(step, len(forward_accl), step):
+        speeds.append(speeds[-1] + np.sum(forward_accl[i-step:i]*dt - error_est))
+    return speeds
+    plt.plot(speeds)
+    plt.savefig(name+'speed.png')
+    #plt.show()
+    plt.close()
+    
+def compensate_gravity_compute_speed_plot(signal, filename):
+    fig, ax = plt.subplots(5, 1, figsize=(20, 30))
+    sos_filt = define_filter()
+    filt_x =  high_pass_filter(signal['accl_x'], sos_filt)
+    filt_y = high_pass_filter(signal['accl_y'], sos_filt)
+    filt_z = high_pass_filter(signal['accl_z'], sos_filt)
+    speeds = speed(filt_z)
+    reg_speed = speed(signal['accl_z'])
+    ax[0].plot(filt_x)
+    ax[0].set_title('filtered x')
+    ax[1].plot(filt_y)
+    ax[1].set_title('filtered y')
+    ax[2].plot(filt_z)
+    ax[2].set_title('filtered z')
+    ax[3].plot(speeds)
+    ax[3].set_title(' filtered estimated speed')
+    ax[4].plot(reg_speed)
+    ax[4].set_title('non filtered speed ')
+    #plt.show()
+    plt.savefig(name+'speed_grav.png')
+    plt.close()
+
+
+
+
+def speed(signal):
+
+    dt = 1/50
+
+    speeds = [0]
     error_est = np.sum(signal[:25]*dt)
     step = int((0.5*50))
     for i in range(step, signal.shape[0], step):
-        v0 = np.sum(signal[(i-step-int(step/4)):(i-step)]*dt-error_est)
-        speeds.append(v0 + np.sum(signal[i-step:i]*dt)-error_est)
+        #v0 = np.sum(signal[(i-step-int(step/4)):(i-step)]*dt-error_est)
+        speeds.append(speeds[-1] + np.sum(signal[i-step:i]*dt)-error_est)
+    return speeds
 
 
     #segments = np.array(np.split(signal, segments))
@@ -140,8 +220,11 @@ def speed(signal, window_size):
 
 
 
+
+
 if __name__ == "__main__":
     #dummytest()
+    #dummy_step_func()
 
     
     savedir = 'plots_fft/filtered/lowpass'
@@ -157,13 +240,19 @@ if __name__ == "__main__":
         signal, _ = read_imu_stream_file(file)
         
         name = splitext(split(file)[1])[0]
+        compensate_gravity_compute_speed_plot(signal, name)
+        '''
         speed(signal['accl_z'].to_numpy(), window_size=3)
         
+        
         signal.interpolate(method='linear', limit=2, limit_direction='both', axis=0, inplace=True)
+        
+        
         #signal = filter_all_axes(signal)
         signal = lowpass_filter(signal)
         spectrogram_viz(signal, name, savedir_spectr)
         fft_viz(signal, figtitle=name, savedir=savedir, timewindow=15)
+        '''
         
     print('done!')
     #signal = pd.read_csv('IMU_Streams/st1MedDNoweight1.csv', names=ALL_COL_NAMES)
