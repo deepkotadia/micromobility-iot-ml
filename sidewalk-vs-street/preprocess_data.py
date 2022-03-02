@@ -215,7 +215,6 @@ def read_all_stream_files_in_dir(dir_path, test_size=0.15, time_window=10, mode=
     test['sublabel'] = test_sublabel
 
 
-
     '''
 
     #try train and test on entirely different sidewalk/street:
@@ -238,8 +237,6 @@ def exclude_sample(filename, criteria):
         if c in filename.lower():
             return True
     return False
-
-
 
 
 def shuffle_and_split(df, test_size=0.2, shuffle=True):

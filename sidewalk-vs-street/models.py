@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 from collections import Counter, defaultdict
 import pandas as pd
 from sklearn import tree
+from hmmlearn import hmm  
 #import lightgbm as lgb
 #import xgboost as xgb
 
@@ -28,7 +29,7 @@ def run_all_model_cross_val_stats(X, y, max_depth=None, max_features='auto', n_e
     print(date_time)
     print("training settings: ")
     print("max depth trees: ", max_depth)
-    print("max features trees: ", max_features)
+    print("max features trees: ", max_features) 
     print("N_estimators trees: ", n_estimators)
     print("svc kernel: ", kernel)
     print("dataset size: ", len(X))
