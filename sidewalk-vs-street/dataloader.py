@@ -1,5 +1,5 @@
 from random import sample
-
+import pandas as pd
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
@@ -10,12 +10,15 @@ from preprocess_data import read_imu_stream_file
 
 class SidewalkDataSet(torch.utils.data.Dataset):
 
-    def __init__(self, path, window_size, step_size=1):
+    def __init__(self, path, path_to_normalize_constants, columns=['accl_x', 'accl_y', 'accl_z']):
         super().__init__()
-        self.window_size = window_size
+        #.window_size = window_size
         self.data = [join(path, f) for f in listdir(path)]
-        
-        self.step_size = step_size
+        self.normalize_constants = pd.read_csv(path_to_normalize_constants, index_col=0)
+        self.columns = columns
+        self.median = self.normalize_constants.loc[columns, ['median']].to_numpy().reshape(1,-1)
+        self.intQr = self.normalize_constants.loc[columns, ['intQrange']].to_numpy().reshape(1,-1)
+        #self.step_size = step_size
         
 
     def __len__(self):
@@ -23,27 +26,21 @@ class SidewalkDataSet(torch.utils.data.Dataset):
 
     def __getitem__(self, i):
         path = self.data[i]
-        if 'sidewalk' in path:
-            label = 1
-        else:
-            label = 0
-        dataframe, _ = read_imu_stream_file(path)
-        idx = dataframe.shape[0] - (dataframe.shape[0] % self.step_size)
-        dataframe = dataframe[:idx]
-        dataframe = dataframe[['accl_x', 'accl_y', 'accl_z']]
-        sample = []
-        for i in range(self.window_size, len(dataframe), self.step_size):
-            sample.append(dataframe.iloc[i-self.window_size:i].to_numpy())
-        labels = torch.tensor([label for i in range(len(sample))]).reshape(-1,1)
-        labels = F.one_hot(labels, num_classes=2)
-        sample = np.rollaxis(np.array(sample), 2, 1)
-        sample = torch.tensor(np.array(sample))
-        return sample, labels
 
+        dataframe = pd.read_csv(path)
+        label = torch.tensor(dataframe['label'])
+        sample = torch.tensor(self.normalize(dataframe[self.columns]))
+        return sample, torch.tensor(label)
+
+    def normalize(self,sample):
+        sample = sample.to_numpy()
+        sample = (sample-self.median)/self.intQr
+        return sample
     
 if __name__ == "__main__":
-    path = "IMU_Streams/train"
-    dataset = SidewalkDataSet(path, window_size=256)
+    path = "IMU_Streams/train/samples"
+    path_to_constants ='IMU_Streams/data_stats_train.csv'
+    dataset = SidewalkDataSet(path, path_to_constants)
     print(len(dataset))
 
     sample = dataset[0]
