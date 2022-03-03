@@ -135,6 +135,7 @@ dmypy.json
 .idea/
 
 # folders
+IMU_Data/
 imu_classifier_results/
 plots/
 IMU_Streams/
