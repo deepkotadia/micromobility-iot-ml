@@ -13,7 +13,7 @@ from dataloader import SidewalkDataSet
 
 class SidewalkClassifier(pl.LightningModule):
 
-    def __init__(self, window_size, use_dropout=False):
+    def __init__(self, train_path, val_path, path_to_constants, use_dropout=False):
         #architecture form A Deep Learning Model for Transportation Mode Detection Based on Smartphone Sensing Data"
         super().__init__()
         self.layerin = nn.Sequential(nn.Conv1d(in_channels=3, out_channels=32, kernel_size=15, stride=1), nn.LeakyReLU())
@@ -40,7 +40,9 @@ class SidewalkClassifier(pl.LightningModule):
         self.dropout = use_dropout
         self.accuracy = torchmetrics.Accuracy()
         self.loss = nn.BCELoss()
-        self.window_size = window_size
+        self.train_path = train_path
+        self.val_path = val_path
+        self.constants = path_to_constants
 
     def forward(self,x):
         x = torch.squeeze(x).float()
@@ -92,12 +94,12 @@ class SidewalkClassifier(pl.LightningModule):
         return loss, val_acc
 
     def train_dataloader(self):
-        train_set = SidewalkDataSet(path="IMU_Streams/train", window_size=256)
-        return DataLoader(train_set)
+        train_set = SidewalkDataSet(self.train_path, self.constants)
+        return DataLoader(train_set, batch_size=256, num_workers=2)
     
     def val_dataloader(self):
-        val_set = SidewalkDataSet(path='IMU_Streams/val', window_size=256)
-        return DataLoader(val_set)
+        val_set = SidewalkDataSet(self.val_path, self.constants)
+        return DataLoader(val_set, batch_size=64, num_workers=2)
 
 
 def run_trainer():
