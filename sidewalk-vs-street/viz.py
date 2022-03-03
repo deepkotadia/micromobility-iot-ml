@@ -1,14 +1,17 @@
 from cmath import cos, sin
 from matplotlib import markers
+from more_itertools import filter_except
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from rsa import sign
 import scipy
 from scipy.signal import savgol_filter, find_peaks, spectrogram, lfilter, butter, sosfilt
 from scipy.fftpack import fft, fftfreq
 from os.path import *
 from os import listdir, mkdir
 from preprocess_data import read_imu_stream_file
+from Accelerometer_integration.integration import * #integration code courtesy of Cedric Lemaitre https://github.com/clemaitre58/Accelerometer_integration
 import pywt
 
 cols = ['mean_accl_x', 'mean_accl_y', 'mean_accl_z',
@@ -60,7 +63,11 @@ def high_pass_filter(signal, sos_filter):
     filtered = sosfilt(sos_filter, signal)
     return filtered
 
-
+def gravity_filter_lowpass(signal): #formula from Liang et al "A Deep Learning Model for Transportation Mode Detection Based on Smartphone Sensing Data"
+    alpha = 0.8 #from Liang et al
+    gravity_est = lfilter(b=[alpha, (1-alpha)], a=[1], x=signal, axis=0)
+    linear_acceleration = signal - gravity_est
+    return linear_acceleration
 
 def fft_viz(signal, figtitle, savedir, timewindow=10):
     frequency = 50
@@ -173,11 +180,22 @@ def compute_speed(forward_accl):
     plt.close()
     
 def compensate_gravity_compute_speed_plot(signal, filename):
-    fig, ax = plt.subplots(5, 1, figsize=(20, 30))
-    sos_filt = define_filter()
-    filt_x =  high_pass_filter(signal['accl_x'], sos_filt)
-    filt_y = high_pass_filter(signal['accl_y'], sos_filt)
-    filt_z = high_pass_filter(signal['accl_z'], sos_filt)
+    fig, ax = plt.subplots(1, 5, figsize=(20, 40))
+    #sos_filt = define_filter()
+    #filt_x =  high_pass_filter(signal['accl_x'], sos_filt)
+    #filt_y = high_pass_filter(signal['accl_y'], sos_filt)
+    #filt_z = high_pass_filter(signal['accl_z'], sos_filt)
+    filt_x = gravity_filter_lowpass(signal['accl_x'])
+    filt_y = gravity_filter_lowpass(signal['accl_y'])
+    filt_z = gravity_filter_lowpass(signal['accl_z'])
+    v0 = np.array([0,0,0])
+    pos_init = np.array([0,0,0])
+    dt = np.array([1/50 for i in range(len(signal['accl_x']))])
+    #velocity, position = double_integration(filt_x, filt_y, filt_z, calibration=0, velocity_init=v0, position_init=pos_init, delta_t=dt)
+    #speeds = velocity[2]
+    #velocity_non_filtered, pos = double_integration(signal['accl_x'], signal['accl_y'], signal['accl_y'], calibration=0, velocity_init=v0,
+    #position_init=pos_init, delta_t=dt)
+    #reg_speed = velocity_non_filtered[2]
     speeds = speed(filt_z)
     reg_speed = speed(signal['accl_z'])
     ax[0].plot(filt_x)
@@ -187,12 +205,15 @@ def compensate_gravity_compute_speed_plot(signal, filename):
     ax[2].plot(filt_z)
     ax[2].set_title('filtered z')
     ax[3].plot(speeds)
-    ax[3].set_title(' filtered estimated speed')
+    ax[3].set_title('filtered estimated speed')
     ax[4].plot(reg_speed)
     ax[4].set_title('non filtered speed ')
-    #plt.show()
+    plt.suptitle('Speed estimate using trapeze-integration on gravity-filtered signal')
+    plt.show()
     plt.savefig(name+'speed_grav.png')
     plt.close()
+    #plt.plot(speeds)
+    #plt.show()
 
 
 
