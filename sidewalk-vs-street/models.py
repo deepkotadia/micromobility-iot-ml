@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 from collections import Counter, defaultdict
 import pandas as pd
 from sklearn import tree
+from hmmlearn import hmm  
 #import lightgbm as lgb
 #import xgboost as xgb
 
@@ -28,7 +29,7 @@ def run_all_model_cross_val_stats(X, y, max_depth=None, max_features='auto', n_e
     print(date_time)
     print("training settings: ")
     print("max depth trees: ", max_depth)
-    print("max features trees: ", max_features)
+    print("max features trees: ", max_features) 
     print("N_estimators trees: ", n_estimators)
     print("svc kernel: ", kernel)
     print("dataset size: ", len(X))
@@ -196,8 +197,12 @@ def compare_by_sublabel(y_pred, y_test, sublabels, title, date_time):
     print("total correct: ", sum(correct_results.values()))
     print("total incorrect: ", sum(wrong_results.values()))
     fig, ax = plt.subplots(1, 2)
-    ax[0].bar(x=list(correct_results.keys()), height=list(correct_results.values()), color='g')
-    ax[1].bar(x=list(wrong_results.keys()), height=(wrong_results.values()), color='r')
+    wrong = np.array(list(wrong_results.values()))
+    correct = np.array(list(correct_results.values()))
+    fractions = correct/(wrong+correct)
+    portions = (correct+wrong)/len(y_pred)
+    ax[0].bar(x=list(correct_results.keys()), height=list(fractions), color='g')
+    ax[1].bar(x=list(wrong_results.keys()), height=list(portions), color='r')
     ax[0].set_ylabel("number of samples")
     ax[0].set_xlabel("sublabel identity")
     ax[1].set_ylabel("number of samples")
@@ -333,11 +338,11 @@ if __name__ == '__main__':
     mode='running_window'
     test_size = 0.20
     shuffle = True
-    WINDOW_SIZE = 75
+    WINDOW_SIZE = 7 # in seconds
     kernel = 'rbf'
-    n_estimators = 3
+    n_estimators = 100
     max_features = 'sqrt'
-    max_depth = None
+    max_depth = 6
     SMOOTH_STEP = 10
     load_from_file = False
     
@@ -348,18 +353,25 @@ if __name__ == '__main__':
     now = datetime.now()
     date_time = now.strftime("%Y_%m_%d_%H_%M_%S")
     if load_from_file:
-        train = pd.read_csv("IMU_Streams/preprocessed/train_samples_running_window_shuffled.csv")
-        test = pd.read_csv("IMU_Streams/preprocessed/test_samples_running_window_shuffled.csv")
+        train = pd.read_csv("IMU_Streams/preprocessed/train_samples_nobrick_lowpass.csv")
+        test = pd.read_csv("IMU_Streams/preprocessed/test_samples_nobrick_lowpass.csv")
         print('loaded data from csv')
     else:
         print("preprocessing data")
-        train, test = read_all_stream_files_in_dir("IMU_Streams", test_size=test_size, shuffle=shuffle, window_size=WINDOW_SIZE, mode=mode)
-        train.to_csv("IMU_Streams/preprocessed/train_samples_nobrick_shuffled.csv")
-        test.to_csv("IMU_Streams/preprocessed/test_samples_nobrick_shuffled.csv")
+        train, test = read_all_stream_files_in_dir("IMU_Streams", test_size=test_size, shuffle=shuffle, time_window=WINDOW_SIZE, mode=mode)
+        train.to_csv("IMU_Streams/preprocessed/train_samples_nobrick_last.csv")
+        test.to_csv("IMU_Streams/preprocessed/test_samples_nobrick_last.csv")
  
     train = train.sort_values(by=['sublabel']).reset_index(drop=True)
     test = test.sort_values(by=['sublabel']).reset_index(drop=True)
-    
+    #select features
+    '''
+    train =  train.drop(columns=['peaks_accl_x', 'peaks_accl_y', 'peaks_accl_z', 'peaks_gyro_x', 'peaks_gyro_y', 'peaks_gyro_z', 
+    'med_prominence_a_x', 'med_prominence_a_y', 'med_prominence_a_z', 
+    'med_prominence_g_x', 'med_prominence_g_y', 'med_prominence_g_z'])
+    test = test.drop(columns=['peaks_accl_x', 'peaks_accl_y', 'peaks_accl_z', 'peaks_gyro_x', 'peaks_gyro_y', 'peaks_gyro_z', 
+    'med_prominence_a_x', 'med_prominence_a_y', 'med_prominence_a_z', 
+    'med_prominence_g_x', 'med_prominence_g_y', 'med_prominence_g_z'])'''
     print("number of training/val samples: ", train.shape[0])
     print("number of test samples: ", test.shape[0])
     print(train.head())
@@ -369,7 +381,7 @@ if __name__ == '__main__':
     X_test = test.iloc[:,1:-2].to_numpy()
     sublabels_test = test['sublabel'].reset_index(drop=True)
     y_test = test['label'].to_numpy()
-    print('number of sublabels in train and test: {} {}'.format(len(sublabels), len(sublabels_test)))
+    print('sublabels in train and test: {} {}'.format(np.unique(sublabels), np.unique(sublabels_test)))
     #parameter_tuning_rf(X_train, y_train, X_test, y_test)
     #run_lgbm(X_train, y_train, X_test, y_test)
     #all_data = pd.concat((X_train, X_test), axis=0)
