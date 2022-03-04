@@ -7,7 +7,10 @@ import numpy as np
 import pytorch_lightning as pl
 from pytorch_lightning import callbacks, loggers, Trainer
 import torchmetrics
+import torchmetrics.functional as F
 from dataloader import SidewalkDataSet
+import matplotlib.pyplot as plt
+from sklearn.metrics import ConfusionMatrixDisplay
 
 
 
@@ -39,6 +42,7 @@ class SidewalkClassifier(pl.LightningModule):
         #misc
         self.dropout = use_dropout
         self.accuracy = torchmetrics.Accuracy()
+        
         self.loss = nn.BCELoss()
         self.train_path = train_path
         self.val_path = val_path
@@ -76,7 +80,7 @@ class SidewalkClassifier(pl.LightningModule):
         y = torch.squeeze(y)
         x_hat = self.forward(x)
         loss = self.loss(x_hat, y)
-        self.log('train_loss', loss)
+        self.log('train_loss', loss, prog_bar=True)
 
         return loss
 
@@ -87,10 +91,24 @@ class SidewalkClassifier(pl.LightningModule):
 
         loss = self.loss(x_hat, y)
         y = y.to(torch.int32)
-        val_acc = self.accuracy(x_hat, y)
-        self.log('val_loss', loss)
-        self.log('val_accuracy', val_acc)
+        val_acc = F.accuracy(x_hat, y)
+        self.log('validation_loss', loss, prog_bar=True)
+        self.log('val_accuracy', val_acc, prog_bar=True)
+
         return loss, val_acc
+    
+    def test_step(self, test_batch, test_idx):
+        x, y = test_batch
+        x_hat = self.forward(x)
+        accuracy = F.accuracy(x_hat, y)
+        precision = F.precision(x_hat, y)
+        recall = F.recall(x_hat, y)
+        f1 = F.f1_score(x_hat, y)
+        confusion_matrix = F.confusion_matrix(x_hat, y, num_classes=2)
+        return {'test_accuracy': accuracy, 'test_precision': precision, 
+        'test_recall': recall, 'test_f1': f1, 'conf_matrix': confusion_matrix}
+
+  
 
     def train_dataloader(self):
         train_set = SidewalkDataSet(self.train_path, self.constants)
@@ -100,6 +118,9 @@ class SidewalkClassifier(pl.LightningModule):
         val_set = SidewalkDataSet(self.val_path, self.constants)
         return DataLoader(val_set, batch_size=32)
 
+    def test_dataloader(self):
+        test_set = SidewalkDataSet(self.val_path, self.constants)
+        return DataLoader(test_set, batch_size=32, num_workers=2)
 
 def run_trainer():
     window_size = 256
@@ -131,5 +152,34 @@ def run_trainer():
 	
     trainer.fit(model)
 
+def validate(trainer=None):
+    train_path = "IMU_Streams/train_samples"
+    val_path = "IMU_Streams/val_samples"
+    constants = "IMU_Streams/data_stats_train.csv"
+    ckpt_path = 'sidewalk-vs-street/checkpoints/epoch=15-step=319.ckpt'
+    #model = torch.load(ckpt_path, map_location=torch.cpu())
+    results = []
+    if trainer == None:
+        trainer = Trainer()
+        model = SidewalkClassifier(train_path, val_path, constants)
+        ckpt_path=ckpt_path
+    else:
+        trainer = trainer
+        model = None
+        ckpt_path = None
+    for i in range(1):
+        res = trainer.test(model=model, ckpt_path=ckpt_path, verbose=True)
+        results.append(res)
+    print(results)
+    matrix = res[0]['conf_matrix']
+    print("confusion", matrix)
+    disp = ConfusionMatrixDisplay(matrix.to_numpy(), display_labels=['street', 'sidewalk'])
+    disp.plot()
+
+
+
+
+
 if __name__ == "__main__":
-    run_trainer()
+    #run_trainer()
+    validate()

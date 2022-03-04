@@ -36,6 +36,7 @@ class SidewalkDataSet(torch.utils.data.Dataset):
     def normalize(self,sample):
         sample = sample.to_numpy()
         sample = (sample-self.median)/self.intQr
+        
         return sample
     
 if __name__ == "__main__":
