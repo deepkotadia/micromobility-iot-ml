@@ -129,5 +129,29 @@ def run_trainer():
 	
     trainer.fit(model)
 
+def validate(trainer=None):
+    train_path = "IMU_Streams/train_samples"
+    val_path = "IMU_Streams/val_samples"
+    constants = "IMU_Streams/data_stats_train.csv"
+    ckpt_path = 'sidewalk-vs-street/checkpoints/epoch=15-step=319.ckpt'
+    #model = torch.load(ckpt_path, map_location=torch.cpu())
+    results = []
+    if trainer == None:
+        trainer = Trainer()
+        model = SidewalkClassifier(train_path, val_path, constants)
+        ckpt_path=ckpt_path
+    else:
+        trainer = trainer
+        model = None
+        ckpt_path = None
+    for i in range(1):
+        res = trainer.validate(model=model, ckpt_path=ckpt_path, verbose=True)
+        results.append(res)
+    print(results)
+
+
+
+
 if __name__ == "__main__":
-    run_trainer()
+    #run_trainer()
+    validate()
