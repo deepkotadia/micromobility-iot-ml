@@ -32,7 +32,7 @@ class SidewalkClassifier(pl.LightningModule):
         self.maxpool6 = nn.MaxPool1d(4,2)
 
         self.fn = nn.Linear(in_features=448, out_features=200)
-        self.dropoutlayer = nn.Dropout(p=0.2)
+        self.dropoutlayer = nn.Dropout(p=0.3)
         self.out = nn.Linear(in_features=200, out_features=2)
         self.sigmoid = nn.Sigmoid()
 
@@ -88,29 +88,31 @@ class SidewalkClassifier(pl.LightningModule):
         loss = self.loss(x_hat, y)
         y = y.to(torch.int32)
         val_acc = self.accuracy(x_hat, y)
-        self.log('validation_loss', loss)
+        self.log('val_loss', loss)
         self.log('val_accuracy', val_acc)
-
         return loss, val_acc
 
     def train_dataloader(self):
         train_set = SidewalkDataSet(self.train_path, self.constants)
-        return DataLoader(train_set, batch_size=256, num_workers=2)
+        return DataLoader(train_set, batch_size=64)
     
     def val_dataloader(self):
         val_set = SidewalkDataSet(self.val_path, self.constants)
-        return DataLoader(val_set, batch_size=64, num_workers=2)
+        return DataLoader(val_set, batch_size=32)
 
 
 def run_trainer():
     window_size = 256
-    model = SidewalkClassifier(window_size)
+    train_path = 'IMU_Data/train/samples'
+    val_path = 'IMU_Data/val/samples'
+    constants_file = 'IMU_Data/data_stats_train.csv'
+    model = SidewalkClassifier(train_path, val_path, constants_file, use_dropout=True)
 
     early_stop_call_back = callbacks.EarlyStopping(
 		monitor='val_loss',
 		min_delta=0.00,
-		patience=5,
-		verbose=False,
+		patience=10,
+		verbose=True,
 		mode='max'
 	)
     
@@ -119,9 +121,9 @@ def run_trainer():
     logger = loggers.TensorBoardLogger(save_dir = 'logs/')
     print("using GPU", torch.cuda.is_available())
     trainer = Trainer(max_epochs=300,
-					  #gpus=1,
-					  #logger=logger, #use default tensorboard
-					  log_every_n_steps=1, #log every update step for debugging
+					  gpus=1,
+					  logger=logger, #use default tensorboard
+					  log_every_n_steps=20, #log every update step for debugging
 					  limit_train_batches=1.0,
 					  limit_val_batches=1.0,
 					  check_val_every_n_epoch=1,
