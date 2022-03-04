@@ -28,13 +28,15 @@ class SidewalkDataSet(torch.utils.data.Dataset):
         path = self.data[i]
 
         dataframe = pd.read_csv(path)
-        label = torch.tensor(dataframe['label'])
+        label = F.one_hot(torch.tensor(dataframe['label'])[0], num_classes=2)
         sample = torch.tensor(self.normalize(dataframe[self.columns]))
+        sample = torch.permute(sample, dims=(1,0))
         return sample, torch.tensor(label)
 
     def normalize(self,sample):
         sample = sample.to_numpy()
         sample = (sample-self.median)/self.intQr
+        
         return sample
     
 if __name__ == "__main__":
