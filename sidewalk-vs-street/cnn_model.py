@@ -125,11 +125,11 @@ class SidewalkClassifier(pl.LightningModule):
         test_set = SidewalkDataSet(self.val_path, self.constants)
         return DataLoader(test_set, batch_size=32, num_workers=2)
 
-def run_trainer():
+def run_trainer(train_path, val_path, constants_file):
     window_size = 256
-    train_path = 'IMU_Data/train/samples'
-    val_path = 'IMU_Data/val/samples'
-    constants_file = 'IMU_Data/data_stats_train.csv'
+    #train_path = 'IMU_Data/train/samples'
+    #val_path = 'IMU_Data/val/samples'
+    #constants_file = 'IMU_Data/data_stats_train.csv'
     model = SidewalkClassifier(train_path, val_path, constants_file, use_dropout=True)
 
     early_stop_call_back = callbacks.EarlyStopping(
@@ -154,6 +154,7 @@ def run_trainer():
 					  callbacks=[early_stop_call_back, lr_callback, checkpoint_callback])
 	
     trainer.fit(model)
+    return trainer
 
 def validate(trainer=None):
     train_path = "IMU_Streams/train_samples"
@@ -161,7 +162,7 @@ def validate(trainer=None):
     constants = "IMU_Streams/data_stats_train.csv"
     ckpt_path = 'sidewalk-vs-street/checkpoints/epoch=15-step=319.ckpt'
     #model = torch.load(ckpt_path, map_location=torch.cpu())
-    results = []
+    
     if trainer == None:
         trainer = Trainer()
         model = SidewalkClassifier(train_path, val_path, constants)
@@ -170,11 +171,14 @@ def validate(trainer=None):
         trainer = trainer
         model = None
         ckpt_path = None
-    for i in range(1):
-        res = trainer.test(model=model, ckpt_path=ckpt_path, verbose=True)
-        results.append(res)
-    print(results)
+    res = trainer.test(model=model, ckpt_path=ckpt_path, verbose=True)
     matrix = res[0]['conf_matrix']
+    f1 = res[0]['test_f1']
+    accuracy = res[0]['test_accuracy']
+    precision = res[0]['test_precision']
+    recall = res[0]['test_recall']
+    return accuracy, f1, precision, recall
+
     print("confusion", matrix)
     disp = ConfusionMatrixDisplay(matrix.to_numpy(), display_labels=['street', 'sidewalk'])
     disp.plot()
