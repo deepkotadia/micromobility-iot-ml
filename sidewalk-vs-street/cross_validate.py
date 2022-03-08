@@ -1,5 +1,5 @@
 from cnn_model import *
-from dataloader import SidewalkDataset
+from dataloader import SidewalkDataSet
 from os import listdir, makedirs, mkdir
 from os.path import isfile, join, isdir, split, splitext
 import numpy as np
@@ -8,6 +8,8 @@ from preprocess_data import read_imu_stream_file, COL_NAMES
 import pandas as pd
 import shutil
 import random
+import numpy as np
+from collections import defaultdict
 
 def split_data(dir_path, idx):
     filenames = [join(dir_path, f) for f in listdir(dir_path) if isfile(join(dir_path, f))] 
@@ -78,21 +80,37 @@ def make_data_sample(main_path, data_paths, fold, split_idx, window_size=256, st
     intQrange = high - low
     stats = np.vstack([median, intQrange, high, low, mean, std])
     stats = pd.DataFrame(stats, columns=['median', 'intQrange', 'high', 'low', 'mean', 'std'], index=['accl_x', 'accl_y', 'accl_z', 'gyro_x', 'gyro_y', 'gyro_z'])
-    #stats = pd.concat([median, intQrange], axis=1).reindex(median.index)
-    #stats = pd.concat((stats, low), axis=1)
-    #stats = pd.DataFrame(stats, columns=['median', 'range','low', 'high', 'mean', 'std'], index=all_files.columns)
-    #stats.
-    stats.to_csv(f'{new_path}/data_stats_{fold}.csv')
+
+    constants_path = f'{new_path}/data_stats_{fold}.csv'
+    stats.to_csv(constants_path)
+    return new_path, constants_path
 
 def cross_validate(dir_path):
 
     runs = 1
+    
+    results_dict = defaultdict(list)
 
     for i in range(runs):
+        
         train_data, val_data = split_data(dir_path, i)
         print('making data')
-        make_data_sample(dir_path, train_data, fold='train', split_idx=i)
-        make_data_sample(dir_path, val_data, fold='val', split_idx=i)
+        train_path, constants_path = make_data_sample(dir_path, train_data, fold='train', split_idx=i)
+        val_path, _ = make_data_sample(dir_path, val_data, fold='val', split_idx=i)
         print('done with data, start training model')
-        
+        trainer = run_trainer(train_path, val_path, constants_path)
+        accuracy, f1, precision, recall = validate(trainer)
+        results_dict['f1'].append(f1)
+        results_dict['accuracy'].append(accuracy)
+        results_dict['precision'].append(precision)
+        results_dict['recall'].append(recall)
+    print(f"avg metrics over {runs} folds")
+    for metric in ['f1', 'accuracy', 'precision', 'recall']:
+        avg = torch.mean(results_dict[metric])
+        print(f"{metric}: {avg}")
+
+if __name__ == "__main__":
+    dir_path = 'IMU_Streams/IMU_Data'
+    cross_validate(dir_path)
+
 
