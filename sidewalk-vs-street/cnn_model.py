@@ -41,8 +41,11 @@ class SidewalkClassifier(pl.LightningModule):
 
         #misc
         self.dropout = use_dropout
-        self.accuracy = torchmetrics.Accuracy()
-        
+        self.accuracy = torchmetrics.Accuracy(num_classes=2)
+        self.compute_precision = torchmetrics.AveragePrecision(num_classes=2)
+        self.compute_f1 = torchmetrics.F1Score(num_classes=2)
+        self.recall = torchmetrics.Recall(num_classes=2) 
+        self.confusion_matrix = torchmetrics.ConfusionMatrix(num_classes=2)
         self.loss = nn.BCELoss()
         self.train_path = train_path
         self.val_path = val_path
@@ -100,15 +103,19 @@ class SidewalkClassifier(pl.LightningModule):
     def test_step(self, test_batch, test_idx):
         x, y = test_batch
         x_hat = self.forward(x)
-        accuracy = F.accuracy(x_hat, y)
-        precision = F.precision(x_hat, y)
-        recall = F.recall(x_hat, y)
-        f1 = F.f1_score(x_hat, y)
-        confusion_matrix = F.confusion_matrix(x_hat, y, num_classes=2)
-        return {'test_accuracy': accuracy, 'test_precision': precision, 
+        y = y.to(torch.int32)
+        accuracy = self.accuracy(x_hat, y)
+        test_precision = self.compute_precision(x_hat, y)
+        recall = self.recall(x_hat, y)
+        f1 = self.compute_f1(x_hat, y)
+        confusion_matrix = self.confusion_matrix(x_hat, y)
+        self.log('test_accuracy', accuracy)
+        self.log('test_precision', test_precision)
+        self.log('test_recall', recall)
+        self.log('f1', f1)
+        self.log('conf_matrix', confusion_matrix)
+        return {'test_accuracy': accuracy, 'test_precision': test_precision, 
         'test_recall': recall, 'test_f1': f1, 'conf_matrix': confusion_matrix}
-
-  
 
     def train_dataloader(self):
         train_set = SidewalkDataSet(self.train_path, self.constants)
@@ -120,7 +127,7 @@ class SidewalkClassifier(pl.LightningModule):
 
     def test_dataloader(self):
         test_set = SidewalkDataSet(self.val_path, self.constants)
-        return DataLoader(test_set, batch_size=32, num_workers=2)
+        return DataLoader(test_set, batch_size=32)
 
 def run_trainer():
     window_size = 256
@@ -153,31 +160,43 @@ def run_trainer():
     trainer.fit(model)
 
 def validate(trainer=None):
-    train_path = "IMU_Streams/train_samples"
-    val_path = "IMU_Streams/val_samples"
-    constants = "IMU_Streams/data_stats_train.csv"
-    ckpt_path = 'sidewalk-vs-street/checkpoints/epoch=15-step=319.ckpt'
+    train_path = "IMU_Data/train/samples"
+    val_path = "IMU_Data/val/samples"
+    constants = "IMU_Data/data_stats_train.csv"
+    ckpt_path = 'logs/default/version_9/checkpoints/epoch=15-step=319.ckpt'
     #model = torch.load(ckpt_path, map_location=torch.cpu())
     results = []
+    reps = 1
+    if torch.cuda.is_available:
+        gpus = 1
+    else:
+        gpus = None
     if trainer == None:
-        trainer = Trainer()
+        trainer = Trainer(gpus=gpus)
         model = SidewalkClassifier(train_path, val_path, constants)
         ckpt_path=ckpt_path
     else:
         trainer = trainer
         model = None
         ckpt_path = None
-    for i in range(1):
+    for i in range(reps):
         res = trainer.test(model=model, ckpt_path=ckpt_path, verbose=True)
-        results.append(res)
-    print(results)
+        results.append(res[0])
+    acc = prec = rec = f1 = 0
+    for i in range(reps):
+        acc += results[i]['test_accuracy']
+        prec += results[i]['test_precision']
+        rec += results[i]['test_recall']
+        f1 += results[i]['f1']
+    print(f'AVERAGE ACROSS {reps} RUNS:')
+    print("Accuracy: ", acc/len(results))
+    print("Precision:", prec/len(results))
+    print("Recall: ", rec/len(results))
+    print("F1 Score: ", f1/len(results))
     matrix = res[0]['conf_matrix']
     print("confusion", matrix)
-    disp = ConfusionMatrixDisplay(matrix.to_numpy(), display_labels=['street', 'sidewalk'])
-    disp.plot()
-
-
-
+    #disp = ConfusionMatrixDisplay(matrix.to_numpy(), display_labels=['street', 'sidewalk'])
+    #disp.plot()
 
 
 if __name__ == "__main__":
