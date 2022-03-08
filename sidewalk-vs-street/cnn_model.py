@@ -42,7 +42,10 @@ class SidewalkClassifier(pl.LightningModule):
         #misc
         self.dropout = use_dropout
         self.accuracy = torchmetrics.Accuracy()
-        
+        self.test_precision = torchmetrics.AveragePrecision()
+        self.recall = torchmetrics.Recall()
+        self.f1 = torchmetrics.F1Score()
+        self.confusion_matrix = torchmetrics.ConfusionMatrix()
         self.loss = nn.BCELoss()
         self.train_path = train_path
         self.val_path = val_path
