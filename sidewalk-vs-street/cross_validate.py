@@ -12,6 +12,7 @@ import numpy as np
 from collections import defaultdict
 
 def split_data(dir_path, idx):
+    print('splitting train/val')
     filenames = [join(dir_path, f) for f in listdir(dir_path) if isfile(join(dir_path, f))] 
     train_data = []
     val_data = []
@@ -46,6 +47,7 @@ def split_data(dir_path, idx):
         shutil.copy(src=val_file, dst=new_dir)
 
 def make_data_sample(main_path, data_paths, fold, split_idx, window_size=256, step_size=1):
+    print(f'making {fold} samples')
     #filenames = [join(dir_path, f) for f in listdir(dir_path) if isfile(join(dir_path, f))] 
     all_files = pd.DataFrame(columns=COL_NAMES)
     
@@ -67,7 +69,8 @@ def make_data_sample(main_path, data_paths, fold, split_idx, window_size=256, st
             file, ext = splitext(filename)
             
             save_dir_list = split(file)
-            savename = f'{new_path}/{save_dir_list[1]}_{idx}{ext}'
+            temp = '{main_path}/split_{split_idx}'
+            savename = f'{temp}/{save_dir_list[1]}_{idx}{ext}'
             #savename = f'{save_dir_list[0]}/samples/{save_dir_list[1]}_{idx}{ext}'
             sample.to_csv(savename)
         
@@ -81,23 +84,32 @@ def make_data_sample(main_path, data_paths, fold, split_idx, window_size=256, st
     stats = np.vstack([median, intQrange, high, low, mean, std])
     stats = pd.DataFrame(stats, columns=['median', 'intQrange', 'high', 'low', 'mean', 'std'], index=['accl_x', 'accl_y', 'accl_z', 'gyro_x', 'gyro_y', 'gyro_z'])
 
-    constants_path = f'{new_path}/data_stats_{fold}.csv'
+    constants_path = f'{new_path}/data_stats_{fold}_{i}.csv'
     stats.to_csv(constants_path)
+    print('done here')
     return new_path, constants_path
 
 def cross_validate(dir_path):
 
-    runs = 1
+    runs = 10
     
     results_dict = defaultdict(list)
 
     for i in range(runs):
-        
-        train_data, val_data = split_data(dir_path, i)
-        print('making data')
-        train_path, constants_path = make_data_sample(dir_path, train_data, fold='train', split_idx=i)
-        val_path, _ = make_data_sample(dir_path, val_data, fold='val', split_idx=i)
-        print('done with data, start training model')
+        print(f"------------RUN: {i}----------------")
+        try_train_path = f'IMU_Data/split_{i}/train'
+        try_val_path = f'IMU_Data/split_{i}/val'
+        if not (isdir(try_train_path) and isdir(try_val_path)):
+            train_data, val_data = split_data(dir_path, i)
+            print('making data')
+            train_path, constants_path = make_data_sample(dir_path, train_data, fold='train', split_idx=i)
+            val_path, _ = make_data_sample(dir_path, val_data, fold='val', split_idx=i)
+            print('done with data, start training model')
+        else:
+            print('data exists, start training now')
+            train_path = try_train_path
+            val_path = try_val_path
+            constants_path = f'{dir_path}/split_{i}/data_stats_train_{i}.csv'
         trainer = run_trainer(train_path, val_path, constants_path)
         accuracy, f1, precision, recall = validate(trainer)
         results_dict['f1'].append(f1)
@@ -110,7 +122,7 @@ def cross_validate(dir_path):
         print(f"{metric}: {avg}")
 
 if __name__ == "__main__":
-    dir_path = 'IMU_Streams/IMU_Data'
+    dir_path = 'IMU_Data'
     cross_validate(dir_path)
 
 

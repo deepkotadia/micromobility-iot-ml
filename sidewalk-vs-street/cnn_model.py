@@ -41,11 +41,11 @@ class SidewalkClassifier(pl.LightningModule):
 
         #misc
         self.dropout = use_dropout
-        self.accuracy = torchmetrics.Accuracy()
-        self.test_precision = torchmetrics.AveragePrecision()
-        self.recall = torchmetrics.Recall()
-        self.f1 = torchmetrics.F1Score()
-        self.confusion_matrix = torchmetrics.ConfusionMatrix()
+        self.accuracy = torchmetrics.Accuracy(num_classes=2)
+        self.test_precision = torchmetrics.AveragePrecision(num_classes=2)
+        self.recall = torchmetrics.Recall(num_classes=2)
+        self.f1 = torchmetrics.F1Score(num_classes=2)
+        self.confusion_matrix = torchmetrics.ConfusionMatrix(num_classes=2)
         self.loss = nn.BCELoss()
         self.train_path = train_path
         self.val_path = val_path
@@ -94,7 +94,7 @@ class SidewalkClassifier(pl.LightningModule):
 
         loss = self.loss(x_hat, y)
         y = y.to(torch.int32)
-        val_acc = F.accuracy(x_hat, y)
+        val_acc = self.accuracy(x_hat, y)
         self.log('validation_loss', loss, prog_bar=True)
         self.log('val_accuracy', val_acc, prog_bar=True)
 
@@ -103,11 +103,11 @@ class SidewalkClassifier(pl.LightningModule):
     def test_step(self, test_batch, test_idx):
         x, y = test_batch
         x_hat = self.forward(x)
-        accuracy = F.accuracy(x_hat, y)
-        precision = F.precision(x_hat, y)
-        recall = F.recall(x_hat, y)
-        f1 = F.f1_score(x_hat, y)
-        confusion_matrix = F.confusion_matrix(x_hat, y, num_classes=2)
+        accuracy = self.accuracy(x_hat, y)
+        precision = self.test_precision(x_hat, y)
+        recall = self.recall(x_hat, y)
+        f1 = self.f1(x_hat, y)
+        confusion_matrix = self.confusion_matrix(x_hat, y, num_classes=2)
         return {'test_accuracy': accuracy, 'test_precision': precision, 
         'test_recall': recall, 'test_f1': f1, 'conf_matrix': confusion_matrix}
 
@@ -133,14 +133,14 @@ def run_trainer(train_path, val_path, constants_file):
     model = SidewalkClassifier(train_path, val_path, constants_file, use_dropout=True)
 
     early_stop_call_back = callbacks.EarlyStopping(
-		monitor='val_loss',
+		monitor='val_accuracy',
 		min_delta=0.00,
 		patience=10,
 		verbose=True,
 		mode='max'
 	)
     
-    checkpoint_callback = callbacks.ModelCheckpoint(monitor="val_loss")
+    checkpoint_callback = callbacks.ModelCheckpoint(monitor="val_accuracy")
     lr_callback = callbacks.LearningRateMonitor(logging_interval='epoch')
     logger = loggers.TensorBoardLogger(save_dir = 'logs/')
     print("using GPU", torch.cuda.is_available())
