@@ -156,7 +156,8 @@ def run_trainer(train_path, val_path, constants_file):
     trainer.fit(model)
     return trainer
 
-def validate(trainer=None):
+def validate(trainer=None): #code to run one time on validation dataset and compute metrics, if no trainer is passed, code must be edited to give checkpoint path
+    
     train_path = "IMU_Streams/train_samples"
     val_path = "IMU_Streams/val_samples"
     constants = "IMU_Streams/data_stats_train.csv"
