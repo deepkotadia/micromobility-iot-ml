@@ -91,11 +91,12 @@ def make_data_sample(main_path, data_paths, fold, split_idx, window_size=256, st
 
 def cross_validate(dir_path):
 
-    runs = 10
+    runs = 5
     
     results_dict = defaultdict(list)
-
+    res_file =  open('cross_val_results_file.txt', 'w')
     for i in range(runs):
+        res_file.write(f"RUN {i} \n")
         print(f"------------RUN: {i}----------------")
         try_train_path = f'IMU_Data/split_{i}/train'
         try_val_path = f'IMU_Data/split_{i}/val'
@@ -116,13 +117,18 @@ def cross_validate(dir_path):
         results_dict['accuracy'].append(accuracy)
         results_dict['precision'].append(precision)
         results_dict['recall'].append(recall)
+        print(results_dict)
+        res_file.write(results_dict, '\n')
     print(f"avg metrics over {runs} folds")
     for metric in ['f1', 'accuracy', 'precision', 'recall']:
         avg = torch.mean(results_dict[metric])
-        print(f"{metric}: {avg}")
+        print(f"Metric: {metric}, Average: {avg}")
+        res_file.write(f"Metric: {metric}, Average: {avg}")
+    res_file.close()
+
 
 if __name__ == "__main__":
     dir_path = 'IMU_Data'
-    cross_validate(dir_path)
+    cross_validate(dir_path="IMU_Data")
 
 

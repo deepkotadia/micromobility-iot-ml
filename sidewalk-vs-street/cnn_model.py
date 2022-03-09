@@ -144,7 +144,7 @@ def run_trainer(train_path, val_path, constants_file):
     lr_callback = callbacks.LearningRateMonitor(logging_interval='epoch')
     logger = loggers.TensorBoardLogger(save_dir = 'logs/')
     print("using GPU", torch.cuda.is_available())
-    trainer = Trainer(max_epochs=300,
+    trainer = Trainer(max_epochs=100,
 					  gpus=1,
 					  logger=logger, #use default tensorboard
 					  log_every_n_steps=20, #log every update step for debugging
