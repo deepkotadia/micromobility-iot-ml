@@ -1,0 +1,14 @@
+RUN 1 
+{'f1': [tensor(0.4775, device='cuda:0')], 'accuracy': [tensor(0.4814, device='cuda:0')], 'precision': [tensor(0.6147, device='cuda:0')], 'recall': [tensor(0.4739, device='cuda:0')]}
+Metric: f1, Average: 0.47746920585632324Metric: accuracy, Average: 0.48141375184059143Metric: precision, Average: 0.6147016286849976Metric: recall, Average: 0.4739495813846588RUN 0 
+RUN 0 
+{'f1': [tensor(0.3824, device='cuda:0')], 'accuracy': [tensor(0.3824, device='cuda:0')], 'precision': [tensor(0.5000, device='cuda:0')], 'recall': [tensor(0.3824, device='cuda:0')]}
+RUN 1 
+{'f1': [tensor(0.3824, device='cuda:0'), tensor(0.5368, device='cuda:0')], 'accuracy': [tensor(0.3824, device='cuda:0'), tensor(0.5369, device='cuda:0')], 'precision': [tensor(0.5000, device='cuda:0'), tensor(0.7643, device='cuda:0')], 'recall': [tensor(0.3824, device='cuda:0'), tensor(0.5367, device='cuda:0')]}
+RUN 2 
+{'f1': [tensor(0.3824, device='cuda:0'), tensor(0.5368, device='cuda:0'), tensor(0.5707, device='cuda:0')], 'accuracy': [tensor(0.3824, device='cuda:0'), tensor(0.5369, device='cuda:0'), tensor(0.5707, device='cuda:0')], 'precision': [tensor(0.5000, device='cuda:0'), tensor(0.7643, device='cuda:0'), tensor(0.6212, device='cuda:0')], 'recall': [tensor(0.3824, device='cuda:0'), tensor(0.5367, device='cuda:0'), tensor(0.5707, device='cuda:0')]}
+RUN 3 
+{'f1': [tensor(0.3824, device='cuda:0'), tensor(0.5368, device='cuda:0'), tensor(0.5707, device='cuda:0'), tensor(0.6478, device='cuda:0')], 'accuracy': [tensor(0.3824, device='cuda:0'), tensor(0.5369, device='cuda:0'), tensor(0.5707, device='cuda:0'), tensor(0.6476, device='cuda:0')], 'precision': [tensor(0.5000, device='cuda:0'), tensor(0.7643, device='cuda:0'), tensor(0.6212, device='cuda:0'), tensor(0.6538, device='cuda:0')], 'recall': [tensor(0.3824, device='cuda:0'), tensor(0.5367, device='cuda:0'), tensor(0.5707, device='cuda:0'), tensor(0.6480, device='cuda:0')]}
+RUN 4 
+{'f1': [tensor(0.3824, device='cuda:0'), tensor(0.5368, device='cuda:0'), tensor(0.5707, device='cuda:0'), tensor(0.6478, device='cuda:0'), tensor(0.5804, device='cuda:0')], 'accuracy': [tensor(0.3824, device='cuda:0'), tensor(0.5369, device='cuda:0'), tensor(0.5707, device='cuda:0'), tensor(0.6476, device='cuda:0'), tensor(0.5803, device='cuda:0')], 'precision': [tensor(0.5000, device='cuda:0'), tensor(0.7643, device='cuda:0'), tensor(0.6212, device='cuda:0'), tensor(0.6538, device='cuda:0'), tensor(0.6726, device='cuda:0')], 'recall': [tensor(0.3824, device='cuda:0'), tensor(0.5367, device='cuda:0'), tensor(0.5707, device='cuda:0'), tensor(0.6480, device='cuda:0'), tensor(0.5806, device='cuda:0')]}
+Metric: f1, Average: 0.5436304807662964Metric: accuracy, Average: 0.5436026453971863Metric: precision, Average: 0.6423625946044922Metric: recall, Average: 0.5436879396438599
