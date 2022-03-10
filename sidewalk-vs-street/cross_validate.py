@@ -69,8 +69,8 @@ def make_data_sample(main_path, data_paths, fold, split_idx, window_size=256, st
             file, ext = splitext(filename)
             
             save_dir_list = split(file)
-            temp = '{main_path}/split_{split_idx}'
-            savename = f'{temp}/{save_dir_list[1]}_{idx}{ext}'
+            temp = f'{main_path}/split_{split_idx}/{fold}'
+            savename = f'{new_path}/{save_dir_list[1]}_{idx}{ext}'
             #savename = f'{save_dir_list[0]}/samples/{save_dir_list[1]}_{idx}{ext}'
             sample.to_csv(savename)
         
@@ -83,18 +83,19 @@ def make_data_sample(main_path, data_paths, fold, split_idx, window_size=256, st
     intQrange = high - low
     stats = np.vstack([median, intQrange, high, low, mean, std])
     stats = pd.DataFrame(stats, columns=['median', 'intQrange', 'high', 'low', 'mean', 'std'], index=['accl_x', 'accl_y', 'accl_z', 'gyro_x', 'gyro_y', 'gyro_z'])
-
-    constants_path = f'{new_path}/data_stats_{fold}_{i}.csv'
+    const_path = f'{main_path}/split_{split_idx}'
+    constants_path = f'{const_path}/data_stats_{fold}_{split_idx}.csv'
     stats.to_csv(constants_path)
     print('done here')
     return new_path, constants_path
 
 def cross_validate(dir_path):
 
-    runs = 5
+    runs = 5 
     
+
     results_dict = defaultdict(list)
-    res_file =  open('cross_val_results_file.txt', 'w')
+    res_file =  open('cross_val_results_file_test.txt', 'a')
     for i in range(runs):
         res_file.write(f"RUN {i} \n")
         print(f"------------RUN: {i}----------------")
@@ -111,17 +112,19 @@ def cross_validate(dir_path):
             train_path = try_train_path
             val_path = try_val_path
             constants_path = f'{dir_path}/split_{i}/data_stats_train_{i}.csv'
-        trainer = run_trainer(train_path, val_path, constants_path)
+        trainer = run_trainer(train_path, val_path, constants_path, split_idx=i)
         accuracy, f1, precision, recall = validate(trainer)
         results_dict['f1'].append(f1)
         results_dict['accuracy'].append(accuracy)
         results_dict['precision'].append(precision)
         results_dict['recall'].append(recall)
+        #results_dict['conf_matrix'].append()
         print(results_dict)
-        res_file.write(results_dict, '\n')
+        res_file.write(str(dict(results_dict)))
+        res_file.write('\n')
     print(f"avg metrics over {runs} folds")
     for metric in ['f1', 'accuracy', 'precision', 'recall']:
-        avg = torch.mean(results_dict[metric])
+        avg = torch.mean(torch.tensor(results_dict[metric]))
         print(f"Metric: {metric}, Average: {avg}")
         res_file.write(f"Metric: {metric}, Average: {avg}")
     res_file.close()
@@ -130,5 +133,4 @@ def cross_validate(dir_path):
 if __name__ == "__main__":
     dir_path = 'IMU_Data'
     cross_validate(dir_path="IMU_Data")
-
 

@@ -83,7 +83,7 @@ class SidewalkClassifier(pl.LightningModule):
         y = torch.squeeze(y)
         x_hat = self.forward(x)
         loss = self.loss(x_hat, y)
-        self.log('train_loss', loss, prog_bar=True)
+        self.log('train_loss', loss, prog_bar=False)
 
         return loss
 
@@ -95,19 +95,21 @@ class SidewalkClassifier(pl.LightningModule):
         loss = self.loss(x_hat, y)
         y = y.to(torch.int32)
         val_acc = self.accuracy(x_hat, y)
-        self.log('validation_loss', loss, prog_bar=True)
-        self.log('val_accuracy', val_acc, prog_bar=True)
+        self.log('val_loss', loss, prog_bar=True)
+        self.log('val_acc', val_acc, prog_bar=True)
 
         return loss, val_acc
     
     def test_step(self, test_batch, test_idx):
         x, y = test_batch
         x_hat = self.forward(x)
-        accuracy = self.accuracy(x_hat, y)
-        precision = self.test_precision(x_hat, y)
-        recall = self.recall(x_hat, y)
-        f1 = self.f1(x_hat, y)
-        confusion_matrix = self.confusion_matrix(x_hat, y, num_classes=2)
+        accuracy = self.accuracy(x_hat, y.int())
+        precision = self.test_precision(x_hat, y.int())
+        recall = self.recall(x_hat, y.int())
+        f1 = self.f1(x_hat, y.int())
+        confusion_matrix = self.confusion_matrix(x_hat, y.int())
+        self.log('test_results', {'test_accuracy': accuracy, 'test_precision': precision, 
+        'test_recall': recall, 'test_f1': f1, 'conf_matrix': confusion_matrix})
         return {'test_accuracy': accuracy, 'test_precision': precision, 
         'test_recall': recall, 'test_f1': f1, 'conf_matrix': confusion_matrix}
 
@@ -115,17 +117,17 @@ class SidewalkClassifier(pl.LightningModule):
 
     def train_dataloader(self):
         train_set = SidewalkDataSet(self.train_path, self.constants)
-        return DataLoader(train_set, batch_size=64)
+        return DataLoader(train_set, batch_size=128, num_workers=2)
     
     def val_dataloader(self):
         val_set = SidewalkDataSet(self.val_path, self.constants)
-        return DataLoader(val_set, batch_size=32)
+        return DataLoader(val_set, batch_size=32, num_workers=2)
 
     def test_dataloader(self):
         test_set = SidewalkDataSet(self.val_path, self.constants)
-        return DataLoader(test_set, batch_size=32, num_workers=2)
+        return DataLoader(test_set, batch_size=32, num_workers=1)
 
-def run_trainer(train_path, val_path, constants_file):
+def run_trainer(train_path, val_path, constants_file, split_idx):
     window_size = 256
     #train_path = 'IMU_Data/train/samples'
     #val_path = 'IMU_Data/val/samples'
@@ -133,18 +135,21 @@ def run_trainer(train_path, val_path, constants_file):
     model = SidewalkClassifier(train_path, val_path, constants_file, use_dropout=True)
 
     early_stop_call_back = callbacks.EarlyStopping(
-		monitor='val_accuracy',
+		monitor='val_acc',
 		min_delta=0.00,
-		patience=10,
+		patience=5,
 		verbose=True,
 		mode='max'
 	)
     
-    checkpoint_callback = callbacks.ModelCheckpoint(monitor="val_accuracy")
+    checkpoint_callback = callbacks.ModelCheckpoint(monitor="val_acc", 
+    dirpath='checkpoints/run_{split_idx}', 
+    filename='{epoch}-{step}-{val_acc:.3f}',
+    save_top_k=1)
     lr_callback = callbacks.LearningRateMonitor(logging_interval='epoch')
     logger = loggers.TensorBoardLogger(save_dir = 'logs/')
-    print("using GPU", torch.cuda.is_available())
-    trainer = Trainer(max_epochs=100,
+    #print("using GPU", torch.cuda.is_available())
+    trainer = Trainer(max_epochs=30,
 					  gpus=1,
 					  logger=logger, #use default tensorboard
 					  log_every_n_steps=20, #log every update step for debugging
@@ -172,12 +177,13 @@ def validate(trainer=None): #code to run one time on validation dataset and comp
         trainer = trainer
         model = None
         ckpt_path = None
-    res = trainer.test(model=model, ckpt_path=ckpt_path, verbose=True)
-    matrix = res[0]['conf_matrix']
-    f1 = res[0]['test_f1']
-    accuracy = res[0]['test_accuracy']
-    precision = res[0]['test_precision']
-    recall = res[0]['test_recall']
+    res = trainer.test(model=model, ckpt_path=ckpt_path, verbose=True)[0]
+    print(res)
+    matrix = res['test_results']['conf_matrix']
+    f1 = res['test_results']['test_f1']
+    accuracy = res['test_results']['test_accuracy']
+    precision = res['test_results']['test_precision']
+    recall = res['test_results']['test_recall']
     return accuracy, f1, precision, recall
 
     print("confusion", matrix)
@@ -189,5 +195,9 @@ def validate(trainer=None): #code to run one time on validation dataset and comp
 
 
 if __name__ == "__main__":
-    #run_trainer()
-    validate()
+    train_path = "IMU_Data/split_0/train"
+    val_path = "IMU_Data/split_0/val"
+    constants = 'IMU_Data/split_0/data_stats_train_0.csv'
+    trainer = run_trainer(train_path, val_path, constants, split_idx=0)
+    #trainer = None
+    validate(trainer)
