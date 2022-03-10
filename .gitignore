@@ -221,6 +221,9 @@ sidewalk-vs-street/Ablation-study-diary.xlsx
 sidewalk-vs-street/imu_classifier_results/street_classifier_2021_12_03_12_03_00.txt
 sidewalk-vs-street/imu_classifier_results/street_classifier_2021_12_03_12_04_52.txt
 sidewalk-vs-street/imu_classifier_results/street_classifier_2021_12_03_12_30_57.txt
+logs/
+checkpoints/
+lightning_logs/
 
 #non-code-files
 *.png
